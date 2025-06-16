@@ -4,8 +4,12 @@ from collections import OrderedDict
 from typing import Union, Optional, Any, List, Tuple, Dict
 
 import numpy as np
-from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
+
+try:
+    from sentence_transformers import SentenceTransformer
+except Exception as e:  # pragma: no cover - optional dependency
+    SentenceTransformer = None
 
 from ...interface import Information, InformationTable, Article, ArticleSectionNode
 from ...utils import ArticleTextProcessing, FileIOHelper
@@ -107,6 +111,10 @@ class StormInformationTable(InformationTable):
         return cls(conversations)
 
     def prepare_table_for_retrieval(self):
+        if SentenceTransformer is None:
+            raise ImportError(
+                "SentenceTransformer is required for retrieval. Install sentence-transformers and optional tf-keras."
+            )
         self.encoder = SentenceTransformer("paraphrase-MiniLM-L6-v2")
         self.collected_urls = []
         self.collected_snippets = []
