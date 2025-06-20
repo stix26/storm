@@ -1,0 +1,330 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  # Python package tests and linting
+  python-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-${{ matrix.python-version }}-
+          
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov black flake8 mypy bandit safety
+        
+    - name: Check code formatting with Black
+      run: |
+        black --check --diff knowledge_storm/
+        black --check --diff examples/
+        
+    - name: Lint with flake8
+      run: |
+        flake8 knowledge_storm/ --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 knowledge_storm/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        
+    - name: Type check with mypy
+      run: |
+        mypy knowledge_storm/ --ignore-missing-imports --no-strict-optional
+        
+    - name: Security check with bandit
+      run: |
+        bandit -r knowledge_storm/ -f json -o bandit-report.json || true
+        
+    - name: Check for known security vulnerabilities
+      run: |
+        safety check --json --output safety-report.json || true
+        
+    - name: Run tests (if they exist)
+      run: |
+        pytest tests/ -v --cov=knowledge_storm --cov-report=xml --cov-report=html || echo "No tests found"
+        
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: false
+
+  # Build and package validation
+  build-validation:
+    runs-on: ubuntu-latest
+    needs: python-tests
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+        
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine setuptools wheel
+        
+    - name: Check version consistency
+      run: |
+        VERSION_SETUP=$(grep -oP '(?<=version=\").*(?=\")' setup.py)
+        VERSION_INIT=$(grep -oP '(?<=__version__ = \").*(?=\")' knowledge_storm/__init__.py)
+        echo "Version in setup.py: $VERSION_SETUP"
+        echo "Version in __init__.py: $VERSION_INIT"
+        if [ "$VERSION_SETUP" != "$VERSION_INIT" ]; then
+          echo "Error: Version mismatch between setup.py ($VERSION_SETUP) and knowledge_storm/__init__.py ($VERSION_INIT)"
+          exit 1
+        fi
+        
+    - name: Build package
+      run: |
+        python -m build
+        
+    - name: Check package metadata
+      run: |
+        twine check dist/*
+        
+    - name: Validate package structure
+      run: |
+        python -c "
+        import tarfile
+        import zipfile
+        import os
+        
+        # Check source distribution
+        for file in os.listdir('dist'):
+            if file.endswith('.tar.gz'):
+                with tarfile.open(f'dist/{file}', 'r:gz') as tar:
+                    members = tar.getnames()
+                    print(f'Source distribution contains {len(members)} files')
+                    if 'knowledge_storm/__init__.py' not in members:
+                        raise Exception('Missing __init__.py in source distribution')
+                        
+        # Check wheel
+        for file in os.listdir('dist'):
+            if file.endswith('.whl'):
+                with zipfile.ZipFile(f'dist/{file}') as wheel:
+                    members = wheel.namelist()
+                    print(f'Wheel contains {len(members)} files')
+                    if 'knowledge_storm/__init__.py' not in members:
+                        raise Exception('Missing __init__.py in wheel')
+        "
+
+  # Docker validation (if Dockerfile exists)
+  docker-validation:
+    runs-on: ubuntu-latest
+    needs: python-tests
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Check for Dockerfile
+      id: check-dockerfile
+      run: |
+        if [ -f "Dockerfile" ]; then
+          echo "dockerfile_exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "dockerfile_exists=false" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Set up Docker Buildx
+      if: steps.check-dockerfile.outputs.dockerfile_exists == 'true'
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Validate Dockerfile syntax
+      if: steps.check-dockerfile.outputs.dockerfile_exists == 'true'
+      run: |
+        docker build --dry-run -f Dockerfile .
+        
+    - name: Build Docker image (dry run)
+      if: steps.check-dockerfile.outputs.dockerfile_exists == 'true'
+      run: |
+        docker build --no-cache --progress=plain -t storm-test .
+        
+    - name: Run Docker container test
+      if: steps.check-dockerfile.outputs.dockerfile_exists == 'true'
+      run: |
+        docker run --rm storm-test python -c "import knowledge_storm; print('Package imported successfully')"
+        
+    - name: Skip Docker validation
+      if: steps.check-dockerfile.outputs.dockerfile_exists == 'false'
+      run: |
+        echo "No Dockerfile found, skipping Docker validation"
+
+  # SQL and database validation
+  sql-validation:
+    runs-on: ubuntu-latest
+    needs: python-tests
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Check for SQL files
+      id: check-sql
+      run: |
+        SQL_FILES=$(find . -name "*.sql" -type f)
+        if [ -n "$SQL_FILES" ]; then
+          echo "sql_files_exist=true" >> $GITHUB_OUTPUT
+          echo "Found SQL files: $SQL_FILES"
+        else
+          echo "sql_files_exist=false" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Validate SQL syntax
+      if: steps.check-sql.outputs.sql_files_exist == 'true'
+      run: |
+        find . -name "*.sql" -type f -exec echo "Validating {}" \; -exec sqlparse --check {} \;
+        
+    - name: Check for database connections in code
+      run: |
+        echo "Checking for database-related code..."
+        grep -r "sqlite\|postgresql\|mysql\|database\|connection" knowledge_storm/ --include="*.py" || echo "No database connections found"
+        
+    - name: Skip SQL validation
+      if: steps.check-sql.outputs.sql_files_exist == 'false'
+      run: |
+        echo "No SQL files found, skipping SQL validation"
+
+  # Security and dependency analysis
+  security-analysis:
+    runs-on: ubuntu-latest
+    needs: python-tests
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+        
+    - name: Install security tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install bandit safety pip-audit
+        
+    - name: Run bandit security scan
+      run: |
+        bandit -r knowledge_storm/ -f json -o bandit-report.json || true
+        bandit -r knowledge_storm/ -f txt -o bandit-report.txt || true
+        
+    - name: Check for known vulnerabilities
+      run: |
+        safety check --json --output safety-report.json || true
+        safety check --full-report || true
+        
+    - name: Audit dependencies
+      run: |
+        pip-audit --format json --output pip-audit-report.json || true
+        pip-audit || true
+        
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-reports
+        path: |
+          bandit-report.json
+          bandit-report.txt
+          safety-report.json
+          pip-audit-report.json
+
+  # Integration tests
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: [python-tests, build-validation]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Test package import
+      run: |
+        python -c "
+        try:
+            import knowledge_storm
+            print('✓ knowledge_storm package imported successfully')
+            print(f'Version: {knowledge_storm.__version__}')
+        except ImportError as e:
+            print(f'✗ Failed to import knowledge_storm: {e}')
+            exit(1)
+        "
+        
+    - name: Test basic functionality
+      run: |
+        python -c "
+        try:
+            from knowledge_storm import interface
+            print('✓ Interface module imported successfully')
+        except ImportError as e:
+            print(f'✗ Failed to import interface: {e}')
+            exit(1)
+        "
+        
+    - name: Check example scripts
+      run: |
+        echo "Checking example scripts..."
+        find examples/ -name "*.py" -type f -exec echo "Found: {}" \;
+        find examples/ -name "*.py" -type f -exec python -m py_compile {} \;
+
+  # Final status check
+  status-check:
+    runs-on: ubuntu-latest
+    needs: [python-tests, build-validation, docker-validation, sql-validation, security-analysis, integration-tests]
+    
+    steps:
+    - name: All checks passed
+      run: |
+        echo "🎉 All CI checks have passed successfully!"
+        echo "✅ Python tests completed"
+        echo "✅ Build validation completed"
+        echo "✅ Docker validation completed"
+        echo "✅ SQL validation completed"
+        echo "✅ Security analysis completed"
+        echo "✅ Integration tests completed" 

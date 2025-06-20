@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  storm:
+    build: .
+    container_name: storm-app
+    environment:
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - .:/app
+      - storm_cache:/app/cache
+    ports:
+      - "8000:8000"
+    command: python -c "import knowledge_storm; print('STORM package loaded successfully')"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import knowledge_storm; print('Health check passed')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  storm-test:
+    build: .
+    container_name: storm-test
+    environment:
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - .:/app
+    command: python -m pytest tests/ -v
+    depends_on:
+      - storm
+
+volumes:
+  storm_cache: 
