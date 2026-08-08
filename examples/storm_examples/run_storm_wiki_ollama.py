@@ -48,9 +48,7 @@ def main(args):
         "model": args.model,
         "port": args.port,
         "url": args.url,
-        "stop": (
-            "\n\n---",
-        ),  # dspy uses "\n\n---" to separate examples. Open models sometimes generate this.
+        "stop": ("\n\n---",),  # dspy uses "\n\n---" to separate examples. Open models sometimes generate this.
     }
 
     conv_simulator_lm = OllamaClient(max_tokens=500, **ollama_kwargs)
@@ -89,9 +87,7 @@ def main(args):
                 k=engine_args.search_top_k,
             )
         case "duckduckgo":
-            rm = DuckDuckGoSearchRM(
-                k=engine_args.search_top_k, safe_search="On", region="us-en"
-            )
+            rm = DuckDuckGoSearchRM(k=engine_args.search_top_k, safe_search="On", region="us-en")
         case "serper":
             rm = SerperRM(
                 serper_search_api_key=os.getenv("SERPER_API_KEY"),
@@ -104,9 +100,7 @@ def main(args):
                 include_raw_content=True,
             )
         case "searxng":
-            rm = SearXNG(
-                searxng_api_key=os.getenv("SEARXNG_API_KEY"), k=engine_args.search_top_k
-            )
+            rm = SearXNG(searxng_api_key=os.getenv("SEARXNG_API_KEY"), k=engine_args.search_top_k)
         case _:
             raise ValueError(
                 f'Invalid retriever: {args.retriever}. Choose either "bing", "you", "brave", "duckduckgo", "serper", "tavily", or "searxng"'
@@ -161,9 +155,7 @@ def main(args):
         "# New Section 2\n"
         "# New Section 3\n## New Subsection 1\n## New Subsection 2\n## New Subsection 3",
     )
-    runner.storm_outline_generation_module.write_outline.write_page_outline.demos = [
-        write_page_outline_example
-    ]
+    runner.storm_outline_generation_module.write_outline.write_page_outline.demos = [write_page_outline_example]
     write_section_example = Example(
         info="[1]\nInformation in document 1\n[2]\nInformation in document 2\n[3]\nInformation in document 3",
         topic="Example Topic",
@@ -172,9 +164,7 @@ def main(args):
         "This is an example sentence [1]. This is another example sentence [2][3].\n"
         "## Subsection 2\nThis is one more example sentence [1].",
     )
-    runner.storm_article_generation.section_gen.write_section.demos = [
-        write_section_example
-    ]
+    runner.storm_article_generation.section_gen.write_section.demos = [write_section_example]
 
     topic = input("Topic: ")
     runner.run(
@@ -191,15 +181,9 @@ def main(args):
 if __name__ == "__main__":
     parser = ArgumentParser()
     # global arguments
-    parser.add_argument(
-        "--url", type=str, default="http://localhost", help="URL of the Ollama server."
-    )
-    parser.add_argument(
-        "--port", type=int, default=11434, help="Port of the Ollama server."
-    )
-    parser.add_argument(
-        "--model", type=str, default="llama3:latest", help="Model of the Ollama server."
-    )
+    parser.add_argument("--url", type=str, default="http://localhost", help="URL of the Ollama server.")
+    parser.add_argument("--port", type=int, default=11434, help="Port of the Ollama server.")
+    parser.add_argument("--model", type=str, default="llama3:latest", help="Model of the Ollama server.")
     parser.add_argument(
         "--output-dir",
         type=str,
@@ -239,8 +223,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--do-polish-article",
         action="store_true",
-        help="If True, polish the article by adding a summarization section and (optionally) removing "
-        "duplicate content.",
+        help="If True, polish the article by adding a summarization section and (optionally) removing " "duplicate content.",
     )
     # hyperparameters for the pre-writing stage
     parser.add_argument(

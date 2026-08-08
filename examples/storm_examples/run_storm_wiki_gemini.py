@@ -53,21 +53,11 @@ def main(args):
     # which is responsible for generating sections with citations.
     # To check out available Google models, see:
     # https://ai.google.dev/gemini-api/docs/get-started/tutorial?lang=python#list_models
-    conv_simulator_lm = GoogleModel(
-        model="models/gemini-1.5-flash", max_tokens=500, **gemini_kwargs
-    )
-    question_asker_lm = GoogleModel(
-        model="models/gemini-1.5-flash", max_tokens=500, **gemini_kwargs
-    )
-    outline_gen_lm = GoogleModel(
-        model="models/gemini-1.5-pro-exp-0801", max_tokens=400, **gemini_kwargs
-    )
-    article_gen_lm = GoogleModel(
-        model="models/gemini-1.5-pro-exp-0801", max_tokens=700, **gemini_kwargs
-    )
-    article_polish_lm = GoogleModel(
-        model="models/gemini-1.5-pro-exp-0801", max_tokens=4000, **gemini_kwargs
-    )
+    conv_simulator_lm = GoogleModel(model="models/gemini-1.5-flash", max_tokens=500, **gemini_kwargs)
+    question_asker_lm = GoogleModel(model="models/gemini-1.5-flash", max_tokens=500, **gemini_kwargs)
+    outline_gen_lm = GoogleModel(model="models/gemini-1.5-pro-exp-0801", max_tokens=400, **gemini_kwargs)
+    article_gen_lm = GoogleModel(model="models/gemini-1.5-pro-exp-0801", max_tokens=700, **gemini_kwargs)
+    article_polish_lm = GoogleModel(model="models/gemini-1.5-pro-exp-0801", max_tokens=4000, **gemini_kwargs)
 
     lm_configs.set_conv_simulator_lm(conv_simulator_lm)
     lm_configs.set_question_asker_lm(question_asker_lm)
@@ -99,9 +89,7 @@ def main(args):
                 k=engine_args.search_top_k,
             )
         case "duckduckgo":
-            rm = DuckDuckGoSearchRM(
-                k=engine_args.search_top_k, safe_search="On", region="us-en"
-            )
+            rm = DuckDuckGoSearchRM(k=engine_args.search_top_k, safe_search="On", region="us-en")
         case "serper":
             rm = SerperRM(
                 serper_search_api_key=os.getenv("SERPER_API_KEY"),
@@ -114,9 +102,7 @@ def main(args):
                 include_raw_content=True,
             )
         case "searxng":
-            rm = SearXNG(
-                searxng_api_key=os.getenv("SEARXNG_API_KEY"), k=engine_args.search_top_k
-            )
+            rm = SearXNG(searxng_api_key=os.getenv("SEARXNG_API_KEY"), k=engine_args.search_top_k)
         case _:
             raise ValueError(
                 f'Invalid retriever: {args.retriever}. Choose either "bing", "you", "brave", "duckduckgo", "serper", "tavily", or "searxng"'
@@ -178,8 +164,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--do-polish-article",
         action="store_true",
-        help="If True, polish the article by adding a summarization section and (optionally) removing "
-        "duplicate content.",
+        help="If True, polish the article by adding a summarization section and (optionally) removing " "duplicate content.",
     )
     # hyperparameters for the pre-writing stage
     parser.add_argument(

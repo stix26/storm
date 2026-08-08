@@ -11,9 +11,7 @@ from typing import Dict, List, Optional, Union, TYPE_CHECKING
 
 from .utils import ArticleTextProcessing
 
-logging.basicConfig(
-    level=logging.INFO, format="%(name)s : %(levelname)-8s : %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(name)s : %(levelname)-8s : %(message)s")
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
@@ -70,11 +68,7 @@ class Information:
     def __eq__(self, other):
         if not isinstance(other, Information):
             return False
-        return (
-            self.url == other.url
-            and set(self.snippets) == set(other.snippets)
-            and self._meta_str() == other._meta_str()
-        )
+        return self.url == other.url and set(self.snippets) == set(other.snippets) and self._meta_str() == other._meta_str()
 
     def __hash__(self):
         return int(
@@ -155,9 +149,7 @@ class Article(ABC):
     def __init__(self, topic_name):
         self.root = ArticleSectionNode(topic_name)
 
-    def find_section(
-        self, node: ArticleSectionNode, name: str
-    ) -> Optional[ArticleSectionNode]:
+    def find_section(self, node: ArticleSectionNode, name: str) -> Optional[ArticleSectionNode]:
         """
         Return the node of the section given the section name.
 
@@ -239,9 +231,7 @@ class Article(ABC):
         if node is None:
             node = self.root
 
-        node.children[:] = [
-            child for child in node.children if self.prune_empty_nodes(child)
-        ]
+        node.children[:] = [child for child in node.children if self.prune_empty_nodes(child)]
 
         if (node.content is None or node.content == "") and not node.children:
             return None
@@ -277,32 +267,24 @@ class Retriever:
 
         return name_to_usage
 
-    def retrieve(
-        self, query: Union[str, List[str]], exclude_urls: List[str] = []
-    ) -> List[Information]:
+    def retrieve(self, query: Union[str, List[str]], exclude_urls: List[str] = []) -> List[Information]:
         queries = query if isinstance(query, list) else [query]
         to_return = []
 
         def process_query(q):
-            retrieved_data_list = self.rm(
-                query_or_queries=[q], exclude_urls=exclude_urls
-            )
+            retrieved_data_list = self.rm(query_or_queries=[q], exclude_urls=exclude_urls)
             local_to_return = []
             for data in retrieved_data_list:
                 for i in range(len(data["snippets"])):
                     # STORM generate the article with citations. We do not consider multi-hop citations.
                     # Remove citations in the source to avoid confusion.
-                    data["snippets"][i] = ArticleTextProcessing.remove_citations(
-                        data["snippets"][i]
-                    )
+                    data["snippets"][i] = ArticleTextProcessing.remove_citations(data["snippets"][i])
                 storm_info = Information.from_dict(data)
                 storm_info.meta["query"] = q
                 local_to_return.append(storm_info)
             return local_to_return
 
-        with concurrent.futures.ThreadPoolExecutor(
-            max_workers=self.max_thread
-        ) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_thread) as executor:
             results = list(executor.map(process_query, queries))
 
         for result in results:
@@ -343,9 +325,7 @@ class OutlineGenerationModule(ABC):
     """
 
     @abstractmethod
-    def generate_outline(
-        self, topic: str, information_table: InformationTable, **kwargs
-    ) -> Article:
+    def generate_outline(self, topic: str, information_table: InformationTable, **kwargs) -> Article:
         """
         Generate outline for the article. Required arguments include:
             topic: the topic of interest
@@ -428,9 +408,7 @@ class LMConfigs(ABC):
     def init_check(self):
         for attr_name in self.__dict__:
             if "_lm" in attr_name and getattr(self, attr_name) is None:
-                logging.warning(
-                    f"Language model for {attr_name} is not initialized. Please call set_{attr_name}()"
-                )
+                logging.warning(f"Language model for {attr_name} is not initialized. Please call set_{attr_name}()")
 
     def collect_and_reset_lm_history(self):
         history = []
@@ -444,9 +422,7 @@ class LMConfigs(ABC):
     def collect_and_reset_lm_usage(self):
         combined_usage = []
         for attr_name in self.__dict__:
-            if "_lm" in attr_name and hasattr(
-                getattr(self, attr_name), "get_usage_and_reset"
-            ):
+            if "_lm" in attr_name and hasattr(getattr(self, attr_name), "get_usage_and_reset"):
                 combined_usage.append(getattr(self, attr_name).get_usage_and_reset())
 
         model_name_to_usage = {}
@@ -455,12 +431,8 @@ class LMConfigs(ABC):
                 if model_name not in model_name_to_usage:
                     model_name_to_usage[model_name] = tokens
                 else:
-                    model_name_to_usage[model_name]["prompt_tokens"] += tokens[
-                        "prompt_tokens"
-                    ]
-                    model_name_to_usage[model_name]["completion_tokens"] += tokens[
-                        "completion_tokens"
-                    ]
+                    model_name_to_usage[model_name]["prompt_tokens"] += tokens["prompt_tokens"]
+                    model_name_to_usage[model_name]["completion_tokens"] += tokens["completion_tokens"]
 
         return model_name_to_usage
 
@@ -494,9 +466,7 @@ class Engine(ABC):
             logger.info(f"{func.__name__} executed in {execution_time:.4f} seconds")
             self.lm_cost[func.__name__] = self.lm_configs.collect_and_reset_lm_usage()
             if hasattr(self, "retriever"):
-                self.rm_cost[func.__name__] = (
-                    self.retriever.collect_and_reset_rm_usage()
-                )
+                self.rm_cost[func.__name__] = self.retriever.collect_and_reset_rm_usage()
             return result
 
         return wrapper
@@ -504,9 +474,7 @@ class Engine(ABC):
     def apply_decorators(self):
         """Apply decorators to methods that need them."""
         methods_to_decorate = [
-            method_name
-            for method_name in dir(self)
-            if callable(getattr(self, method_name)) and method_name.startswith("run_")
+            method_name for method_name in dir(self) if callable(getattr(self, method_name)) and method_name.startswith("run_")
         ]
         for method_name in methods_to_decorate:
             original_method = getattr(self, method_name)

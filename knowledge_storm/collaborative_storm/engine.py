@@ -50,24 +50,12 @@ class CollaborativeStormLMConfigs(LMConfigs):
                 "top_p": top_p,
                 "api_base": None,
             }
-            self.question_answering_lm = LitellmModel(
-                model="gpt-4o-2024-05-13", max_tokens=1000, **openai_kwargs
-            )
-            self.discourse_manage_lm = LitellmModel(
-                model="gpt-4o-2024-05-13", max_tokens=500, **openai_kwargs
-            )
-            self.utterance_polishing_lm = LitellmModel(
-                model="gpt-4o-2024-05-13", max_tokens=2000, **openai_kwargs
-            )
-            self.warmstart_outline_gen_lm = LitellmModel(
-                model="gpt-4-1106-preview", max_tokens=500, **openai_kwargs
-            )
-            self.question_asking_lm = LitellmModel(
-                model="gpt-4o-2024-05-13", max_tokens=300, **openai_kwargs
-            )
-            self.knowledge_base_lm = LitellmModel(
-                model="gpt-4o-2024-05-13", max_tokens=1000, **openai_kwargs
-            )
+            self.question_answering_lm = LitellmModel(model="gpt-4o-2024-05-13", max_tokens=1000, **openai_kwargs)
+            self.discourse_manage_lm = LitellmModel(model="gpt-4o-2024-05-13", max_tokens=500, **openai_kwargs)
+            self.utterance_polishing_lm = LitellmModel(model="gpt-4o-2024-05-13", max_tokens=2000, **openai_kwargs)
+            self.warmstart_outline_gen_lm = LitellmModel(model="gpt-4-1106-preview", max_tokens=500, **openai_kwargs)
+            self.question_asking_lm = LitellmModel(model="gpt-4o-2024-05-13", max_tokens=300, **openai_kwargs)
+            self.knowledge_base_lm = LitellmModel(model="gpt-4o-2024-05-13", max_tokens=1000, **openai_kwargs)
         elif lm_type and lm_type == "azure":
             azure_kwargs = {
                 "api_key": os.getenv("AZURE_API_KEY"),
@@ -76,24 +64,16 @@ class CollaborativeStormLMConfigs(LMConfigs):
                 "api_base": os.getenv("AZURE_API_BASE"),
                 "api_version": os.getenv("AZURE_API_VERSION"),
             }
-            self.question_answering_lm = LitellmModel(
-                model="azure/gpt-4o", max_tokens=1000, **azure_kwargs, model_type="chat"
-            )
-            self.discourse_manage_lm = LitellmModel(
-                model="azure/gpt-4o", max_tokens=500, **azure_kwargs, model_type="chat"
-            )
+            self.question_answering_lm = LitellmModel(model="azure/gpt-4o", max_tokens=1000, **azure_kwargs, model_type="chat")
+            self.discourse_manage_lm = LitellmModel(model="azure/gpt-4o", max_tokens=500, **azure_kwargs, model_type="chat")
             self.utterance_polishing_lm = LitellmModel(
                 model="azure/gpt-4o", max_tokens=2000, **azure_kwargs, model_type="chat"
             )
             self.warmstart_outline_gen_lm = LitellmModel(
                 model="azure/gpt-4o", max_tokens=300, **azure_kwargs, model_type="chat"
             )
-            self.question_asking_lm = LitellmModel(
-                model="azure/gpt-4o", max_tokens=300, **azure_kwargs, model_type="chat"
-            )
-            self.knowledge_base_lm = LitellmModel(
-                model="azure/gpt-4o", max_tokens=1000, **azure_kwargs, model_type="chat"
-            )
+            self.question_asking_lm = LitellmModel(model="azure/gpt-4o", max_tokens=300, **azure_kwargs, model_type="chat")
+            self.knowledge_base_lm = LitellmModel(model="azure/gpt-4o", max_tokens=1000, **azure_kwargs, model_type="chat")
         elif lm_type and lm_type == "together":
             together_kwargs = {
                 "api_key": os.getenv("TOGETHER_API_KEY"),
@@ -137,9 +117,7 @@ class CollaborativeStormLMConfigs(LMConfigs):
                 **together_kwargs,
             )
         else:
-            raise Exception(
-                "No valid OpenAI API provider is provided. Cannot use default LLM configurations."
-            )
+            raise Exception("No valid OpenAI API provider is provided. Cannot use default LLM configurations.")
 
     def set_question_answering_lm(self, model: Union[dspy.dsp.LM, dspy.dsp.HFModel]):
         self.question_answering_lm = model
@@ -162,14 +140,9 @@ class CollaborativeStormLMConfigs(LMConfigs):
     def collect_and_reset_lm_usage(self):
         lm_usage = {}
         for attr_name in self.__dict__:
-            if "_lm" in attr_name and hasattr(
-                getattr(self, attr_name), "get_usage_and_reset"
-            ):
+            if "_lm" in attr_name and hasattr(getattr(self, attr_name), "get_usage_and_reset"):
                 usage = getattr(self, attr_name).get_usage_and_reset()
-                if any(
-                    value["prompt_tokens"] != 0 or value["completion_tokens"] != 0
-                    for value in usage.values()
-                ):
+                if any(value["prompt_tokens"] != 0 or value["completion_tokens"] != 0 for value in usage.values()):
                     lm_usage[attr_name] = usage
         return lm_usage
 
@@ -199,9 +172,7 @@ class RunnerArgument:
     )
     max_search_queries: int = field(
         default=2,
-        metadata={
-            "help": "Maximum number of search queries to consider for each question."
-        },
+        metadata={"help": "Maximum number of search queries to consider for each question."},
     )
     total_conv_turn: int = field(
         default=20,
@@ -217,9 +188,7 @@ class RunnerArgument:
     )
     warmstart_max_num_experts: int = field(
         default=3,
-        metadata={
-            "help": "Max number of experts in perspective guided QA in warm start process"
-        },
+        metadata={"help": "Max number of experts in perspective guided QA in warm start process"},
     )
     warmstart_max_turn_per_experts: int = field(
         default=2,
@@ -227,9 +196,7 @@ class RunnerArgument:
     )
     warmstart_max_thread: int = field(
         default=3,
-        metadata={
-            "help": "Max number thread for parallel perspective guided QA in warm start process"
-        },
+        metadata={"help": "Max number thread for parallel perspective guided QA in warm start process"},
     )
     max_thread_num: int = field(
         default=10,
@@ -244,15 +211,11 @@ class RunnerArgument:
     )
     moderator_override_N_consecutive_answering_turn: int = field(
         default=3,
-        metadata={
-            "help": "Number of consecutive experts answering turn before moderator override the conversation"
-        },
+        metadata={"help": "Number of consecutive experts answering turn before moderator override the conversation"},
     )
     node_expansion_trigger_count: int = field(
         default=10,
-        metadata={
-            "help": "Trigger node expansion for node that contain more than N snippets"
-        },
+        metadata={"help": "Trigger node expansion for node that contain more than N snippets"},
     )
     disable_moderator: bool = field(
         default=False,
@@ -375,9 +338,7 @@ class DiscourseManager:
             rm=self.rm,
             callback_handler=self.callback_handler,
         )
-        self.generate_expert_module = GenerateExpertModule(
-            engine=self.lm_config.discourse_manage_lm
-        )
+        self.generate_expert_module = GenerateExpertModule(engine=self.lm_config.discourse_manage_lm)
         self.next_turn_moderator_override = False
 
     def serialize_experts(self) -> List[Dict]:
@@ -405,9 +366,7 @@ class DiscourseManager:
                 )
             )
 
-    def _should_generate_question(
-        self, conversation_history: List[ConversationTurn]
-    ) -> bool:
+    def _should_generate_question(self, conversation_history: List[ConversationTurn]) -> bool:
         consecutive_non_questioning_turn = 0
         for conv_turn in reversed(conversation_history):
             if conv_turn.utterance_type not in [
@@ -417,10 +376,7 @@ class DiscourseManager:
                 consecutive_non_questioning_turn += 1
             else:
                 break
-        return (
-            consecutive_non_questioning_turn
-            >= self.runner_argument.moderator_override_N_consecutive_answering_turn
-        )
+        return consecutive_non_questioning_turn >= self.runner_argument.moderator_override_N_consecutive_answering_turn
 
     def _parse_expert_names_to_agent(self, expert_descriptions: Union[str, List[str]]):
         if type(expert_descriptions) == str:
@@ -476,27 +432,20 @@ class DiscourseManager:
             next_turn_policy.agent = self.moderator
             if not dry_run:
                 self.next_turn_moderator_override = False
-        elif (
-            not self.runner_argument.disable_moderator
-            and self._should_generate_question(conversation_history)
-        ):
+        elif not self.runner_argument.disable_moderator and self._should_generate_question(conversation_history):
             next_turn_policy.agent = self.moderator
             next_turn_policy.should_reorganize_knowledge_base = True
         # experts RAG gen
         else:
             next_turn_policy.agent = self.general_knowledge_provider
-            if (
-                not self._is_last_turn_questioning(conversation_history)
-                and not self.runner_argument.disable_multi_experts
-            ):
+            if not self._is_last_turn_questioning(conversation_history) and not self.runner_argument.disable_multi_experts:
                 if dry_run:
                     next_turn_policy.agent = self.experts[0]
                 else:
                     next_turn_policy.agent = self.experts.pop(0)
                     self.experts.append(next_turn_policy.agent)
             next_turn_policy.should_update_experts_list = (
-                self._is_last_turn_questioning(conversation_history)
-                and not self.runner_argument.disable_multi_experts
+                self._is_last_turn_questioning(conversation_history) and not self.runner_argument.disable_multi_experts
             )
             next_turn_policy.should_polish_utterance = True
         return next_turn_policy
@@ -541,12 +490,8 @@ class CoStormRunner:
         return {
             "runner_argument": self.runner_argument.to_dict(),
             "lm_config": self.lm_config.to_dict(),
-            "conversation_history": [
-                turn.to_dict() for turn in self.conversation_history
-            ],
-            "warmstart_conv_archive": [
-                turn.to_dict() for turn in self.warmstart_conv_archive
-            ],
+            "conversation_history": [turn.to_dict() for turn in self.conversation_history],
+            "warmstart_conv_archive": [turn.to_dict() for turn in self.warmstart_conv_archive],
             "experts": self.discourse_manager.serialize_experts(),
             "knowledge_base": self.knowledge_base.to_dict(),
         }
@@ -563,12 +508,9 @@ class CoStormRunner:
             callback_handler=callback_handler,
         )
         costorm_runner.encoder = Encoder()
-        costorm_runner.conversation_history = [
-            ConversationTurn.from_dict(turn) for turn in data["conversation_history"]
-        ]
+        costorm_runner.conversation_history = [ConversationTurn.from_dict(turn) for turn in data["conversation_history"]]
         costorm_runner.warmstart_conv_archive = [
-            ConversationTurn.from_dict(turn)
-            for turn in data.get("warmstart_conv_archive", [])
+            ConversationTurn.from_dict(turn) for turn in data.get("warmstart_conv_archive", [])
         ]
         costorm_runner.discourse_manager.deserialize_experts(data["experts"])
         costorm_runner.knowledge_base = KnowledgeBase.from_dict(
@@ -588,9 +530,7 @@ class CoStormRunner:
         It will also generate a first draft of report and use it to produce an engaging and concise conversation presented to the
         user to catch up with system's knowledge about the topic.
         """
-        with self.logging_wrapper.log_pipeline_stage(
-            pipeline_stage=f"warm start stage"
-        ):
+        with self.logging_wrapper.log_pipeline_stage(pipeline_stage=f"warm start stage"):
             if not self.runner_argument.rag_only_baseline_mode:
                 warm_start_module = WarmStartModule(
                     lm_config=self.lm_config,
@@ -608,15 +548,9 @@ class CoStormRunner:
                     topic=self.runner_argument.topic,
                     knowledge_base=self.knowledge_base,
                 )
-                self.discourse_manager.experts = (
-                    self.discourse_manager._parse_expert_names_to_agent(
-                        warmstart_experts
-                    )
-                )
+                self.discourse_manager.experts = self.discourse_manager._parse_expert_names_to_agent(warmstart_experts)
                 self.discourse_manager.next_turn_moderator_override = True
-                self.conversation_history = (
-                    warmstart_revised_conv if warmstart_revised_conv else warmstart_conv
-                )
+                self.conversation_history = warmstart_revised_conv if warmstart_revised_conv else warmstart_conv
                 self.warmstart_conv_archive = warmstart_conv
                 self.knowledge_base.reorganize()
             else:
@@ -629,9 +563,7 @@ class CoStormRunner:
                     )
                 if self.conversation_history is None:
                     self.conversation_history = []
-                conv_turn = (
-                    self.discourse_manager.pure_rag_agent.generate_topic_background()
-                )
+                conv_turn = self.discourse_manager.pure_rag_agent.generate_topic_background()
                 self.conversation_history.append(conv_turn)
                 self.knowledge_base.update_from_conv_turn(
                     conv_turn=conv_turn,
@@ -647,12 +579,8 @@ class CoStormRunner:
         Returns:
             str: A string representing the report, with "#" "##" indicating hierarchical sections and [1][2] indicating references.
         """
-        with self.logging_wrapper.log_pipeline_stage(
-            f"report generation after conv turn: {len(self.conversation_history)}"
-        ):
-            with self.logging_wrapper.log_event(
-                "report generation stage: generate report"
-            ):
+        with self.logging_wrapper.log_pipeline_stage(f"report generation after conv turn: {len(self.conversation_history)}"):
+            with self.logging_wrapper.log_event("report generation stage: generate report"):
                 return self.knowledge_base.to_report()
 
     def dump_logging_and_reset(self):
@@ -695,9 +623,7 @@ class CoStormRunner:
         """
         last_conv_turn = self.conversation_history[-1]
         cur_turn_name = f"conv turn: {len(self.conversation_history) + 1}"
-        with self.logging_wrapper.log_pipeline_stage(
-            pipeline_stage=f"{cur_turn_name} stage"
-        ):
+        with self.logging_wrapper.log_pipeline_stage(pipeline_stage=f"{cur_turn_name} stage"):
             conv_turn = None
             if user_utterance:
                 self.discourse_manager.next_turn_moderator_override = False
@@ -708,9 +634,7 @@ class CoStormRunner:
                 )
                 self.conversation_history.append(conv_turn)
             else:
-                with self.logging_wrapper.log_event(
-                    f"{cur_turn_name}: get turn policy"
-                ):
+                with self.logging_wrapper.log_event(f"{cur_turn_name}: get turn policy"):
                     if self.callback_handler is not None:
                         self.callback_handler.on_turn_policy_planning_start()
                     turn_policy = self.discourse_manager.get_next_turn_policy(
@@ -720,18 +644,14 @@ class CoStormRunner:
                         dry_run=False,
                     )
 
-                with self.logging_wrapper.log_event(
-                    f"{cur_turn_name}: generate utterance"
-                ):
+                with self.logging_wrapper.log_event(f"{cur_turn_name}: generate utterance"):
                     conv_turn = turn_policy.agent.generate_utterance(
                         knowledge_base=self.knowledge_base,
                         conversation_history=self.conversation_history,
                     )
 
                 if turn_policy.should_update_experts_list:
-                    with self.logging_wrapper.log_event(
-                        f"{cur_turn_name}: update experts list"
-                    ):
+                    with self.logging_wrapper.log_event(f"{cur_turn_name}: update experts list"):
                         self.discourse_manager._update_expert_list_from_utterance(
                             focus=last_conv_turn.raw_utterance,
                             background_info=conv_turn.raw_utterance,
@@ -739,9 +659,7 @@ class CoStormRunner:
 
                 if conv_turn is not None:
                     self.conversation_history.append(conv_turn)
-                    with self.logging_wrapper.log_event(
-                        f"{cur_turn_name}: insert into knowledge base"
-                    ):
+                    with self.logging_wrapper.log_event(f"{cur_turn_name}: insert into knowledge base"):
                         if self.callback_handler is not None:
                             self.callback_handler.on_mindmap_insert_start()
                         self.knowledge_base.update_from_conv_turn(
@@ -752,9 +670,7 @@ class CoStormRunner:
                         if self.callback_handler is not None:
                             self.callback_handler.on_mindmap_insert_end()
                 if turn_policy.should_reorganize_knowledge_base:
-                    with self.logging_wrapper.log_event(
-                        f"{cur_turn_name}: reorganize knowledge base"
-                    ):
+                    with self.logging_wrapper.log_event(f"{cur_turn_name}: reorganize knowledge base"):
                         if self.callback_handler is not None:
                             self.callback_handler.on_mindmap_reorg_start()
                         self.knowledge_base.reorganize()

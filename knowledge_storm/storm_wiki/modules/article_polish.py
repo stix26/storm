@@ -22,13 +22,9 @@ class StormArticlePolishingModule(ArticlePolishingModule):
         self.article_gen_lm = article_gen_lm
         self.article_polish_lm = article_polish_lm
 
-        self.polish_page = PolishPageModule(
-            write_lead_engine=self.article_gen_lm, polish_engine=self.article_polish_lm
-        )
+        self.polish_page = PolishPageModule(write_lead_engine=self.article_gen_lm, polish_engine=self.article_polish_lm)
 
-    def polish_article(
-        self, topic: str, draft_article: StormArticle, remove_duplicate: bool = False
-    ) -> StormArticle:
+    def polish_article(self, topic: str, draft_article: StormArticle, remove_duplicate: bool = False) -> StormArticle:
         """
         Polish article.
 
@@ -39,14 +35,10 @@ class StormArticlePolishingModule(ArticlePolishingModule):
         """
 
         article_text = draft_article.to_string()
-        polish_result = self.polish_page(
-            topic=topic, draft_page=article_text, polish_whole_page=remove_duplicate
-        )
+        polish_result = self.polish_page(topic=topic, draft_page=article_text, polish_whole_page=remove_duplicate)
         lead_section = f"# summary\n{polish_result.lead_section}"
         polished_article = "\n\n".join([lead_section, polish_result.page])
-        polished_article_dict = ArticleTextProcessing.parse_article_into_dict(
-            polished_article
-        )
+        polished_article_dict = ArticleTextProcessing.parse_article_into_dict(polished_article)
         polished_article = copy.deepcopy(draft_article)
         polished_article.insert_or_create_section(article_dict=polished_article_dict)
         polished_article.post_processing()
@@ -87,9 +79,7 @@ class PolishPageModule(dspy.Module):
     def forward(self, topic: str, draft_page: str, polish_whole_page: bool = True):
         # NOTE: Change show_guidelines to false to make the generation more robust to different LM families.
         with dspy.settings.context(lm=self.write_lead_engine, show_guidelines=False):
-            lead_section = self.write_lead(
-                topic=topic, draft_page=draft_page
-            ).lead_section
+            lead_section = self.write_lead(topic=topic, draft_page=draft_page).lead_section
             if "The lead section:" in lead_section:
                 lead_section = lead_section.split("The lead section:")[1].strip()
         if polish_whole_page:

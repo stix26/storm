@@ -30,14 +30,10 @@ class StormArticleGenerationModule(ArticleGenerationModule):
         self.max_thread_num = max_thread_num
         self.section_gen = ConvToSection(engine=self.article_gen_lm)
 
-    def generate_section(
-        self, topic, section_name, information_table, section_outline, section_query
-    ):
+    def generate_section(self, topic, section_name, information_table, section_outline, section_query):
         collected_info: List[Information] = []
         if information_table is not None:
-            collected_info = information_table.retrieve_information(
-                queries=section_query, search_top_k=self.retrieve_top_k
-            )
+            collected_info = information_table.retrieve_information(queries=section_query, search_top_k=self.retrieve_top_k)
         output = self.section_gen(
             topic=topic,
             outline=section_outline,
@@ -76,9 +72,7 @@ class StormArticleGenerationModule(ArticleGenerationModule):
 
         section_output_dict_collection = []
         if len(sections_to_write) == 0:
-            logging.error(
-                f"No outline for {topic}. Will directly search with the topic."
-            )
+            logging.error(f"No outline for {topic}. Will directly search with the topic.")
             section_output_dict = self.generate_section(
                 topic=topic,
                 section_name=topic,
@@ -88,18 +82,16 @@ class StormArticleGenerationModule(ArticleGenerationModule):
             )
             section_output_dict_collection = [section_output_dict]
         else:
-            with concurrent.futures.ThreadPoolExecutor(
-                max_workers=self.max_thread_num
-            ) as executor:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_thread_num) as executor:
                 future_to_sec_title = {}
                 for section_title in sections_to_write:
                     # We don't want to write a separate introduction section.
                     if section_title.lower().strip() == "introduction":
                         continue
                         # We don't want to write a separate conclusion section.
-                    if section_title.lower().strip().startswith(
-                        "conclusion"
-                    ) or section_title.lower().strip().startswith("summary"):
+                    if section_title.lower().strip().startswith("conclusion") or section_title.lower().strip().startswith(
+                        "summary"
+                    ):
                         continue
                     section_query = article_with_outline.get_outline_as_list(
                         root_section_name=section_title, add_hashtags=False
@@ -141,9 +133,7 @@ class ConvToSection(dspy.Module):
         self.write_section = dspy.Predict(WriteSection)
         self.engine = engine
 
-    def forward(
-        self, topic: str, outline: str, section: str, collected_info: List[Information]
-    ):
+    def forward(self, topic: str, outline: str, section: str, collected_info: List[Information]):
         info = ""
         for idx, storm_info in enumerate(collected_info):
             info += f"[{idx + 1}]\n" + "\n".join(storm_info.snippets)

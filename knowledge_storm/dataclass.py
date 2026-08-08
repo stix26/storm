@@ -40,9 +40,7 @@ class ConversationTurn:
         self.role = role if ":" not in role else role.split(":")[0]
         self.role_description = "" if ":" not in role else role.split(":")[1]
         self.queries = queries if queries is not None else []
-        self.raw_retrieved_info = (
-            raw_retrieved_info if raw_retrieved_info is not None else []
-        )
+        self.raw_retrieved_info = raw_retrieved_info if raw_retrieved_info is not None else []
         self.cited_info = cited_info if cited_info is not None else {}
         self.utterance_type = utterance_type
         self.claim_to_make = claim_to_make if claim_to_make is not None else ""
@@ -67,9 +65,7 @@ class ConversationTurn:
 
     @classmethod
     def from_dict(cls, conv_turn_dict: Dict):
-        raw_retrieved_info = [
-            Information.from_dict(info) for info in conv_turn_dict["raw_retrieved_info"]
-        ]
+        raw_retrieved_info = [Information.from_dict(info) for info in conv_turn_dict["raw_retrieved_info"]]
 
         return cls(
             utterance=conv_turn_dict["utterance"],
@@ -147,9 +143,7 @@ class KnowledgeNode:
                     if child.name == child_node_name:
                         return child
             elif duplicate_handling == "raise error":
-                raise Exception(
-                    f"Insert node error. Node {child_node_name} already exists under its parent node {self.name}."
-                )
+                raise Exception(f"Insert node error. Node {child_node_name} already exists under its parent node {self.name}.")
         child_node = KnowledgeNode(name=child_node_name, parent=self)
         self.children.append(child_node)
         return child_node
@@ -276,9 +270,7 @@ class KnowledgeNode:
                 parent=parent_node,
                 children=None,
                 synthesize_output=data.get("synthesize_output", None),
-                need_regenerate_synthesize_output=data.get(
-                    "need_regenerate_synthesize_output", True
-                ),
+                need_regenerate_synthesize_output=data.get("need_regenerate_synthesize_output", True),
             )
             for child_data in data["children"]:
                 child_node = helper(cls, child_data, parent_node=node)
@@ -336,17 +328,13 @@ class KnowledgeBase:
         self.topic: str = topic
         self.encoder: Encoder = encoder
 
-        self.information_insert_module = InsertInformationModule(
-            engine=knowledge_base_lm, encoder=self.encoder
-        )
+        self.information_insert_module = InsertInformationModule(engine=knowledge_base_lm, encoder=self.encoder)
         self.expand_node_module = ExpandNodeModule(
             engine=knowledge_base_lm,
             information_insert_module=self.information_insert_module,
             node_expansion_trigger_count=node_expansion_trigger_count,
         )
-        self.article_generation_module = ArticleGenerationModule(
-            engine=knowledge_base_lm
-        )
+        self.article_generation_module = ArticleGenerationModule(engine=knowledge_base_lm)
         self.gen_summary_module = KnowledgeBaseSummaryModule(engine=knowledge_base_lm)
 
         self.root: KnowledgeNode = KnowledgeNode(name="root")
@@ -360,9 +348,7 @@ class KnowledgeBase:
         self._lock = threading.Lock()
 
     def to_dict(self):
-        info_uuid_to_info_dict = {
-            key: value.to_dict() for key, value in self.info_uuid_to_info_dict.items()
-        }
+        info_uuid_to_info_dict = {key: value.to_dict() for key, value in self.info_uuid_to_info_dict.items()}
         return {
             "topic": self.topic,
             "tree": self.root.to_dict(),
@@ -385,20 +371,14 @@ class KnowledgeBase:
             encoder=encoder,
         )
         knowledge_base.root = KnowledgeNode.from_dict(data["tree"])
-        knowledge_base.info_hash_to_uuid_dict = {
-            int(key): int(value)
-            for key, value in data["info_hash_to_uuid_dict"].items()
-        }
+        knowledge_base.info_hash_to_uuid_dict = {int(key): int(value) for key, value in data["info_hash_to_uuid_dict"].items()}
         info_uuid_to_info_dict = {
-            int(key): Information.from_dict(value)
-            for key, value in data["info_uuid_to_info_dict"].items()
+            int(key): Information.from_dict(value) for key, value in data["info_uuid_to_info_dict"].items()
         }
         knowledge_base.info_uuid_to_info_dict = info_uuid_to_info_dict
         return knowledge_base
 
-    def get_knowledge_base_structure_embedding(
-        self, root: Optional[KnowledgeNode] = None
-    ) -> Tuple[np.ndarray, List[str]]:
+    def get_knowledge_base_structure_embedding(self, root: Optional[KnowledgeNode] = None) -> Tuple[np.ndarray, List[str]]:
         outline_string = self.get_node_hierarchy_string(
             include_indent=False,
             include_full_path=True,
@@ -408,9 +388,7 @@ class KnowledgeBase:
         outline_string_hash = hash(outline_string)
         if outline_string_hash != self.kb_embedding["hash"]:
             outline_strings: List[str] = outline_string.split("\n")
-            cleaned_outline_strings = [
-                outline.replace(" -> ", ", ") for outline in outline_strings
-            ]
+            cleaned_outline_strings = [outline.replace(" -> ", ", ") for outline in outline_strings]
             encoded_outline = self.encoder.encode(cleaned_outline_strings)
             self.kb_embedding = {
                 "hash": outline_string_hash,
@@ -484,13 +462,9 @@ class KnowledgeBase:
             duplicate_handling (str): How to handle duplicate nodes. Options are "skip", "none", and "raise error".
         """
         if parent_node is None:
-            return self.root.add_child(
-                new_node_name, duplicate_handling=duplicate_handling
-            )
+            return self.root.add_child(new_node_name, duplicate_handling=duplicate_handling)
         else:
-            return parent_node.add_child(
-                new_node_name, duplicate_handling=duplicate_handling
-            )
+            return parent_node.add_child(new_node_name, duplicate_handling=duplicate_handling)
 
     def find_node(self, current_node, node_name):
         """
@@ -602,24 +576,14 @@ class KnowledgeBase:
                 full_path = " -> ".join(cur_root.get_path_from_root(root=root))
                 node_info = cur_root.name if not include_full_path else full_path
                 hash_tag = "#" * level + " " if include_hash_tag else ""
-                content_count = (
-                    f" ({len(cur_root.content)})" if include_node_content_count else ""
-                )
-                special_note = (
-                    ""
-                    if cited_indices is None or full_path not in paths_to_highlight
-                    else " ⭐"
-                )
+                content_count = f" ({len(cur_root.content)})" if include_node_content_count else ""
+                special_note = "" if cited_indices is None or full_path not in paths_to_highlight else " ⭐"
 
                 if should_include_current_node:
-                    to_return.append(
-                        f"{indent}{hash_tag}{node_info}{content_count}{special_note}"
-                    )
+                    to_return.append(f"{indent}{hash_tag}{node_info}{content_count}{special_note}")
                     if should_omit_child_nodes(cur_root):
                         if len(cur_root.children) > 0:
-                            child_indent = indent = (
-                                "" if not include_indent else "\t" * (level)
-                            )
+                            child_indent = indent = "" if not include_indent else "\t" * (level)
                             to_return.append(f"{child_indent}...")
                     else:
                         for child in cur_root.children:
@@ -655,9 +619,7 @@ class KnowledgeBase:
         current_node = self.root if root is None else root
 
         for name in node_names[1:]:
-            found_node = next(
-                (child for child in current_node.children if child.name == name), None
-            )
+            found_node = next((child for child in current_node.children if child.name == name), None)
             if found_node is None:
                 if missing_node_handling == "abort":
                     return
@@ -700,16 +662,14 @@ class KnowledgeBase:
             )
             information_hash = hash(information)
             if information.citation_uuid == -1:
-                info_citation_uuid = self.info_hash_to_uuid_dict.get(
-                    information_hash, len(self.info_hash_to_uuid_dict) + 1
-                )
+                info_citation_uuid = self.info_hash_to_uuid_dict.get(information_hash, len(self.info_hash_to_uuid_dict) + 1)
                 information.citation_uuid = info_citation_uuid
                 self.info_hash_to_uuid_dict[information_hash] = info_citation_uuid
                 self.info_uuid_to_info_dict[info_citation_uuid] = information
             if target_node is not None:
-                self.info_uuid_to_info_dict[information.citation_uuid].meta[
-                    "placement"
-                ] = " -> ".join(target_node.get_path_from_root())
+                self.info_uuid_to_info_dict[information.citation_uuid].meta["placement"] = " -> ".join(
+                    target_node.get_path_from_root()
+                )
                 target_node.insert_information(information.citation_uuid)
 
     def trim_empty_leaf_nodes(self):
@@ -773,9 +733,7 @@ class KnowledgeBase:
     def update_all_info_path(self):
         def _helper(node):
             for citation_idx in node.content:
-                self.info_uuid_to_info_dict[citation_idx].meta["placement"] = (
-                    " -> ".join(node.get_path_from_root())
-                )
+                self.info_uuid_to_info_dict[citation_idx].meta["placement"] = " -> ".join(node.get_path_from_root())
             for child in node.children:
                 _helper(child)
 
@@ -799,26 +757,15 @@ class KnowledgeBase:
                 information=info_to_insert,
                 allow_create_new_node=allow_create_new_node,
             )
-        old_to_new_citation_idx_mapping = {
-            old_idx: info.citation_uuid
-            for old_idx, info in conv_turn.cited_info.items()
-        }
+        old_to_new_citation_idx_mapping = {old_idx: info.citation_uuid for old_idx, info in conv_turn.cited_info.items()}
 
         for old_idx, new_idx in old_to_new_citation_idx_mapping.items():
-            conv_turn.utterance = conv_turn.utterance.replace(
-                f"[{old_idx}]", f"[_{new_idx}_]"
-            )
-            conv_turn.raw_utterance = conv_turn.raw_utterance.replace(
-                f"[{old_idx}]", f"[_{new_idx}_]"
-            )
+            conv_turn.utterance = conv_turn.utterance.replace(f"[{old_idx}]", f"[_{new_idx}_]")
+            conv_turn.raw_utterance = conv_turn.raw_utterance.replace(f"[{old_idx}]", f"[_{new_idx}_]")
         for _, new_idx in old_to_new_citation_idx_mapping.items():
-            conv_turn.utterance = conv_turn.utterance.replace(
-                f"[_{new_idx}_]", f"[{new_idx}]"
-            )
+            conv_turn.utterance = conv_turn.utterance.replace(f"[_{new_idx}_]", f"[{new_idx}]")
             conv_turn.utterance.replace("[-1]", "")
-            conv_turn.raw_utterance = conv_turn.raw_utterance.replace(
-                f"[_{new_idx}_]", f"[{new_idx}]"
-            )
+            conv_turn.raw_utterance = conv_turn.raw_utterance.replace(f"[_{new_idx}_]", f"[{new_idx}]")
             conv_turn.raw_utterance.replace("[-1]", "")
         conv_turn.cited_info = None
 

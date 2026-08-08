@@ -23,9 +23,7 @@ class QuestionToQuery(dspy.Signature):
     - query n"""
 
     topic = dspy.InputField(prefix="Topic context:", format=str)
-    question = dspy.InputField(
-        prefix="I want to collect information about: ", format=str
-    )
+    question = dspy.InputField(prefix="I want to collect information about: ", format=str)
     queries = dspy.OutputField(prefix="Queries: \n", format=str)
 
 
@@ -65,25 +63,16 @@ class AnswerQuestionModule(dspy.Module):
 
     def retrieve_information(self, topic, question):
         # decompose question to queries
-        with self.logging_wrapper.log_event(
-            f"AnswerQuestionModule.question_to_query ({hash(question)})"
-        ):
+        with self.logging_wrapper.log_event(f"AnswerQuestionModule.question_to_query ({hash(question)})"):
             with dspy.settings.context(lm=self.question_answering_lm):
                 queries = self.question_to_query(topic=topic, question=question).queries
             queries = trim_output_after_hint(queries, hint="Queries:")
-            queries = [
-                q.replace("-", "").strip().strip('"').strip('"').strip()
-                for q in queries.split("\n")
-            ]
+            queries = [q.replace("-", "").strip().strip('"').strip('"').strip() for q in queries.split("\n")]
             queries = queries[: self.max_search_queries]
         self.logging_wrapper.add_query_count(count=len(queries))
-        with self.logging_wrapper.log_event(
-            f"AnswerQuestionModule.retriever.retrieve ({hash(question)})"
-        ):
+        with self.logging_wrapper.log_event(f"AnswerQuestionModule.retriever.retrieve ({hash(question)})"):
             # retrieve information using retriever
-            searched_results: List[Information] = self.retriever.retrieve(
-                list(set(queries)), exclude_urls=[]
-            )
+            searched_results: List[Information] = self.retriever.retrieve(list(set(queries)), exclude_urls=[])
         # update storm information meta to include the question
         for storm_info in searched_results:
             storm_info.meta["question"] = question
@@ -117,30 +106,18 @@ class AnswerQuestionModule(dspy.Module):
         # retrieve information
         if callback_handler is not None:
             callback_handler.on_expert_information_collection_start()
-        queries, searched_results = self.retrieve_information(
-            topic=topic, question=question
-        )
+        queries, searched_results = self.retrieve_information(topic=topic, question=question)
         if callback_handler is not None:
             callback_handler.on_expert_information_collection_end(searched_results)
         # format information string for answer generation
-        info_text, index_to_information_mapping = format_search_results(
-            searched_results, mode=mode
-        )
+        info_text, index_to_information_mapping = format_search_results(searched_results, mode=mode)
         answer = "Sorry, there is insufficient information to answer the question."
         # generate answer to the question
         if info_text:
-            with self.logging_wrapper.log_event(
-                f"AnswerQuestionModule.answer_question ({hash(question)})"
-            ):
-                with dspy.settings.context(
-                    lm=self.question_answering_lm, show_guidelines=False
-                ):
-                    answer = self.answer_question(
-                        topic=topic, question=question, info=info_text, style=style
-                    ).answer
-                    answer = ArticleTextProcessing.remove_uncompleted_sentences_with_citations(
-                        answer
-                    )
+            with self.logging_wrapper.log_event(f"AnswerQuestionModule.answer_question ({hash(question)})"):
+                with dspy.settings.context(lm=self.question_answering_lm, show_guidelines=False):
+                    answer = self.answer_question(topic=topic, question=question, info=info_text, style=style).answer
+                    answer = ArticleTextProcessing.remove_uncompleted_sentences_with_citations(answer)
                     answer = trim_output_after_hint(
                         answer,
                         hint="Now give your response. (Try to use as many different sources as possible and do not hallucinate.)",
@@ -150,9 +127,7 @@ class AnswerQuestionModule(dspy.Module):
                     if callback_handler is not None:
                         callback_handler.on_expert_utterance_generation_end()
         # construct cited search result
-        cited_searched_results = extract_cited_storm_info(
-            response=answer, index_to_storm_info=index_to_information_mapping
-        )
+        cited_searched_results = extract_cited_storm_info(response=answer, index_to_storm_info=index_to_information_mapping)
 
         return dspy.Prediction(
             question=question,

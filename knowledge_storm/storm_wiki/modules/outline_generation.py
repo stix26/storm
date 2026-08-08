@@ -53,20 +53,14 @@ class StormOutlineGenerationModule(OutlineGenerationModule):
         if callback_handler is not None:
             callback_handler.on_information_organization_start()
 
-        concatenated_dialogue_turns = sum(
-            [conv for (_, conv) in information_table.conversations], []
-        )
+        concatenated_dialogue_turns = sum([conv for (_, conv) in information_table.conversations], [])
         result = self.write_outline(
             topic=topic,
             dlg_history=concatenated_dialogue_turns,
             callback_handler=callback_handler,
         )
-        article_with_outline_only = StormArticle.from_outline_str(
-            topic=topic, outline_str=result.outline
-        )
-        article_with_draft_outline_only = StormArticle.from_outline_str(
-            topic=topic, outline_str=result.old_outline
-        )
+        article_with_outline_only = StormArticle.from_outline_str(topic=topic, outline_str=result.outline)
+        article_with_draft_outline_only = StormArticle.from_outline_str(topic=topic, outline_str=result.old_outline)
         if not return_draft_outline:
             return article_with_outline_only
         return article_with_outline_only, article_with_draft_outline_only
@@ -90,34 +84,22 @@ class WriteOutline(dspy.Module):
     ):
         trimmed_dlg_history = []
         for turn in dlg_history:
-            if (
-                "topic you" in turn.agent_utterance.lower()
-                or "topic you" in turn.user_utterance.lower()
-            ):
+            if "topic you" in turn.agent_utterance.lower() or "topic you" in turn.user_utterance.lower():
                 continue
             trimmed_dlg_history.append(turn)
         conv = "\n".join(
-            [
-                f"Wikipedia Writer: {turn.user_utterance}\nExpert: {turn.agent_utterance}"
-                for turn in trimmed_dlg_history
-            ]
+            [f"Wikipedia Writer: {turn.user_utterance}\nExpert: {turn.agent_utterance}" for turn in trimmed_dlg_history]
         )
         conv = ArticleTextProcessing.remove_citations(conv)
         conv = ArticleTextProcessing.limit_word_count_preserve_newline(conv, 5000)
 
         with dspy.settings.context(lm=self.engine):
             if old_outline is None:
-                old_outline = ArticleTextProcessing.clean_up_outline(
-                    self.draft_page_outline(topic=topic).outline
-                )
+                old_outline = ArticleTextProcessing.clean_up_outline(self.draft_page_outline(topic=topic).outline)
                 if callback_handler:
-                    callback_handler.on_direct_outline_generation_end(
-                        outline=old_outline
-                    )
+                    callback_handler.on_direct_outline_generation_end(outline=old_outline)
             outline = ArticleTextProcessing.clean_up_outline(
-                self.write_page_outline(
-                    topic=topic, old_outline=old_outline, conv=conv
-                ).outline
+                self.write_page_outline(topic=topic, old_outline=old_outline, conv=conv).outline
             )
             if callback_handler:
                 callback_handler.on_outline_refinement_end(outline=outline)

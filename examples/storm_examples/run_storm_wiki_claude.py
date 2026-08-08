@@ -51,21 +51,11 @@ def main(args):
     # which is used to split queries, synthesize answers in the conversation. We recommend using stronger models
     # for outline_gen_lm which is responsible for organizing the collected information, and article_gen_lm
     # which is responsible for generating sections with citations.
-    conv_simulator_lm = ClaudeModel(
-        model="claude-3-haiku-20240307", max_tokens=500, **claude_kwargs
-    )
-    question_asker_lm = ClaudeModel(
-        model="claude-3-sonnet-20240229", max_tokens=500, **claude_kwargs
-    )
-    outline_gen_lm = ClaudeModel(
-        model="claude-3-opus-20240229", max_tokens=400, **claude_kwargs
-    )
-    article_gen_lm = ClaudeModel(
-        model="claude-3-opus-20240229", max_tokens=700, **claude_kwargs
-    )
-    article_polish_lm = ClaudeModel(
-        model="claude-3-opus-20240229", max_tokens=4000, **claude_kwargs
-    )
+    conv_simulator_lm = ClaudeModel(model="claude-3-haiku-20240307", max_tokens=500, **claude_kwargs)
+    question_asker_lm = ClaudeModel(model="claude-3-sonnet-20240229", max_tokens=500, **claude_kwargs)
+    outline_gen_lm = ClaudeModel(model="claude-3-opus-20240229", max_tokens=400, **claude_kwargs)
+    article_gen_lm = ClaudeModel(model="claude-3-opus-20240229", max_tokens=700, **claude_kwargs)
+    article_polish_lm = ClaudeModel(model="claude-3-opus-20240229", max_tokens=4000, **claude_kwargs)
 
     lm_configs.set_conv_simulator_lm(conv_simulator_lm)
     lm_configs.set_question_asker_lm(question_asker_lm)
@@ -97,9 +87,7 @@ def main(args):
                 k=engine_args.search_top_k,
             )
         case "duckduckgo":
-            rm = DuckDuckGoSearchRM(
-                k=engine_args.search_top_k, safe_search="On", region="us-en"
-            )
+            rm = DuckDuckGoSearchRM(k=engine_args.search_top_k, safe_search="On", region="us-en")
         case "serper":
             rm = SerperRM(
                 serper_search_api_key=os.getenv("SERPER_API_KEY"),
@@ -112,9 +100,7 @@ def main(args):
                 include_raw_content=True,
             )
         case "searxng":
-            rm = SearXNG(
-                searxng_api_key=os.getenv("SEARXNG_API_KEY"), k=engine_args.search_top_k
-            )
+            rm = SearXNG(searxng_api_key=os.getenv("SEARXNG_API_KEY"), k=engine_args.search_top_k)
         case _:
             raise ValueError(
                 f'Invalid retriever: {args.retriever}. Choose either "bing", "you", "brave", "duckduckgo", "serper", "tavily", or "searxng"'
@@ -176,8 +162,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--do-polish-article",
         action="store_true",
-        help="If True, polish the article by adding a summarization section and (optionally) removing "
-        "duplicate content.",
+        help="If True, polish the article by adding a summarization section and (optionally) removing " "duplicate content.",
     )
     # hyperparameters for the pre-writing stage
     parser.add_argument(

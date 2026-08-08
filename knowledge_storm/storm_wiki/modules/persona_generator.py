@@ -28,9 +28,7 @@ def get_wiki_page_title_and_toc(url):
 
     # Start processing from h2 to exclude the main title from TOC
     for header in soup.find_all(["h2", "h3", "h4", "h5", "h6"]):
-        level = int(
-            header.name[1]
-        )  # Extract the numeric part of the header tag (e.g., '2' from 'h2')
+        level = int(header.name[1])  # Extract the numeric part of the header tag (e.g., '2' from 'h2')
         section_title = header.text.replace("[edit]", "").strip().replace("\xa0", " ")
         if section_title in excluded_sections:
             continue
@@ -59,9 +57,7 @@ class GenPersona(dspy.Signature):
     """
 
     topic = dspy.InputField(prefix="Topic of interest:", format=str)
-    examples = dspy.InputField(
-        prefix="Wiki page outlines of related topics for inspiration:\n", format=str
-    )
+    examples = dspy.InputField(prefix="Wiki page outlines of related topics for inspiration:\n", format=str)
     personas = dspy.OutputField(format=str)
 
 
@@ -92,9 +88,7 @@ class CreateWriterWithPersona(dspy.Module):
                     continue
             if len(examples) == 0:
                 examples.append("N/A")
-            gen_persona_output = self.gen_persona(
-                topic=topic, examples="\n----------\n".join(examples)
-            ).personas
+            gen_persona_output = self.gen_persona(topic=topic, examples="\n----------\n".join(examples)).personas
 
         personas = []
         for s in gen_persona_output.split("\n"):

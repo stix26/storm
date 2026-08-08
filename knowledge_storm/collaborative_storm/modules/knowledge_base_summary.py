@@ -26,7 +26,5 @@ class KnowledgeBaseSummaryModule(dspy.Module):
             include_node_content_count=False,
         )
         with dspy.settings.context(lm=self.engine, show_guidelines=False):
-            summary = self.gen_summary(
-                topic=knowledge_base.topic, structure=structure
-            ).output
+            summary = self.gen_summary(topic=knowledge_base.topic, structure=structure).output
         return summary

@@ -36,27 +36,15 @@ class ArticleGenerationModule(dspy.Module):
             information.append(info_text)
         return "\n".join(information)
 
-    def gen_section(
-        self, topic: str, node: KnowledgeNode, knowledge_base: KnowledgeBase
-    ):
+    def gen_section(self, topic: str, node: KnowledgeNode, knowledge_base: KnowledgeBase):
         if node is None or len(node.content) == 0:
             return ""
-        if (
-            node.synthesize_output is not None
-            and node.synthesize_output
-            and not node.need_regenerate_synthesize_output
-        ):
+        if node.synthesize_output is not None and node.synthesize_output and not node.need_regenerate_synthesize_output:
             return node.synthesize_output
         all_citation_index = node.collect_all_content()
-        information = self._get_cited_information_string(
-            all_citation_index=all_citation_index, knowledge_base=knowledge_base
-        )
+        information = self._get_cited_information_string(all_citation_index=all_citation_index, knowledge_base=knowledge_base)
         with dspy.settings.context(lm=self.engine):
-            synthesize_output = clean_up_section(
-                self.write_section(
-                    topic=topic, info=information, section=node.name
-                ).output
-            )
+            synthesize_output = clean_up_section(self.write_section(topic=topic, info=information, section=node.name).output)
         node.synthesize_output = synthesize_output
         node.need_regenerate_synthesize_output = False
         return node.synthesize_output
@@ -67,9 +55,7 @@ class ArticleGenerationModule(dspy.Module):
 
         # Define a function to generate paragraphs for nodes
         def _node_generate_paragraph(node):
-            node_gen_paragraph = self.gen_section(
-                topic=knowledge_base.topic, node=node, knowledge_base=knowledge_base
-            )
+            node_gen_paragraph = self.gen_section(topic=knowledge_base.topic, node=node, knowledge_base=knowledge_base)
             lines = node_gen_paragraph.split("\n")
             if lines[0].strip().replace("*", "").replace("#", "") == node.name:
                 lines = lines[1:]
@@ -79,10 +65,7 @@ class ArticleGenerationModule(dspy.Module):
 
         with ThreadPoolExecutor(max_workers=5) as executor:
             # Submit all tasks
-            future_to_node = {
-                executor.submit(_node_generate_paragraph, node): node
-                for node in all_nodes
-            }
+            future_to_node = {executor.submit(_node_generate_paragraph, node): node for node in all_nodes}
 
             # Collect the results as they complete
             for future in as_completed(future_to_node):

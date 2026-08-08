@@ -85,25 +85,16 @@ class LM:
         if self.model_type == "chat":
             completion = cached_litellm_completion if cache else litellm_completion
         else:
-            completion = (
-                cached_litellm_text_completion if cache else litellm_text_completion
-            )
+            completion = cached_litellm_text_completion if cache else litellm_text_completion
 
-        response = completion(
-            ujson.dumps(dict(model=self.model, messages=messages, **kwargs))
-        )
-        outputs = [
-            c.message.content if hasattr(c, "message") else c["text"]
-            for c in response["choices"]
-        ]
+        response = completion(ujson.dumps(dict(model=self.model, messages=messages, **kwargs)))
+        outputs = [c.message.content if hasattr(c, "message") else c["text"] for c in response["choices"]]
 
         # Logging, with removed api key & where `cost` is None on cache hit.
         kwargs = {k: v for k, v in kwargs.items() if not k.startswith("api_")}
         entry = dict(prompt=prompt, messages=messages, kwargs=kwargs, response=response)
         entry = dict(**entry, outputs=outputs, usage=dict(response["usage"]))
-        entry = dict(
-            **entry, cost=response.get("_hidden_params", {}).get("response_cost")
-        )
+        entry = dict(**entry, cost=response.get("_hidden_params", {}).get("response_cost"))
         self.history.append(entry)
 
         return outputs
@@ -124,9 +115,7 @@ def litellm_completion(request, cache={"no-cache": True, "no-store": True}):
 
 @functools.lru_cache(maxsize=LM_LRU_CACHE_MAX_SIZE)
 def cached_litellm_text_completion(request):
-    return litellm_text_completion(
-        request, cache={"no-cache": False, "no-store": False}
-    )
+    return litellm_text_completion(request, cache={"no-cache": False, "no-store": False})
 
 
 def litellm_text_completion(request, cache={"no-cache": True, "no-store": True}):
@@ -141,9 +130,7 @@ def litellm_text_completion(request, cache={"no-cache": True, "no-store": True})
     api_base = kwargs.pop("api_base", None) or os.getenv(f"{provider}_API_BASE")
 
     # Build the prompt from the messages.
-    prompt = "\n\n".join(
-        [x["content"] for x in kwargs.pop("messages")] + ["BEGIN RESPONSE:"]
-    )
+    prompt = "\n\n".join([x["content"] for x in kwargs.pop("messages")] + ["BEGIN RESPONSE:"])
 
     return litellm.text_completion(
         cache=cache,
@@ -240,29 +227,18 @@ class LitellmModel(LM):
         if self.model_type == "chat":
             completion = cached_litellm_completion if cache else litellm_completion
         else:
-            completion = (
-                cached_litellm_text_completion if cache else litellm_text_completion
-            )
+            completion = cached_litellm_text_completion if cache else litellm_text_completion
 
-        response = completion(
-            ujson.dumps(dict(model=self.model, messages=messages, **kwargs))
-        )
+        response = completion(ujson.dumps(dict(model=self.model, messages=messages, **kwargs)))
         response_dict = response.json()
         self.log_usage(response_dict)
-        outputs = [
-            c.message.content if hasattr(c, "message") else c["text"]
-            for c in response["choices"]
-        ]
+        outputs = [c.message.content if hasattr(c, "message") else c["text"] for c in response["choices"]]
 
         # Logging, with removed api key & where `cost` is None on cache hit.
         kwargs = {k: v for k, v in kwargs.items() if not k.startswith("api_")}
-        entry = dict(
-            prompt=prompt, messages=messages, kwargs=kwargs, response=response_dict
-        )
+        entry = dict(prompt=prompt, messages=messages, kwargs=kwargs, response=response_dict)
         entry = dict(**entry, outputs=outputs, usage=dict(response_dict["usage"]))
-        entry = dict(
-            **entry, cost=response.get("_hidden_params", {}).get("response_cost")
-        )
+        entry = dict(**entry, cost=response.get("_hidden_params", {}).get("response_cost"))
         self.history.append(entry)
 
         return outputs
@@ -423,9 +399,7 @@ class DeepSeekModel(dspy.OpenAI):
             "messages": [{"role": "user", "content": prompt}],
             **kwargs,
         }
-        response = requests.post(
-            f"{self.api_base}/v1/chat/completions", headers=headers, json=data
-        )
+        response = requests.post(f"{self.api_base}/v1/chat/completions", headers=headers, json=data)
         response.raise_for_status()
         return response.json()
 
@@ -514,9 +488,7 @@ class AzureOpenAIModel(dspy.LM):
             if self.model_type == "chat":
                 messages = [{"role": "user", "content": prompt}]
 
-                response = self.client.chat.completions.create(
-                    messages=messages, **kwargs
-                )
+                response = self.client.chat.completions.create(messages=messages, **kwargs)
             else:
                 response = self.client.completions.create(prompt=prompt, **kwargs)
 
@@ -610,9 +582,7 @@ class GroqModel(dspy.OpenAI):
         self.api_key = api_key or os.getenv("GROQ_API_KEY")
         self.api_base = api_base
         if not self.api_key:
-            raise ValueError(
-                "Groq API key must be provided either as an argument or as an environment variable GROQ_API_KEY"
-            )
+            raise ValueError("Groq API key must be provided either as an argument or as an environment variable GROQ_API_KEY")
 
     def log_usage(self, response):
         """Log the total tokens from the Groq API response."""
@@ -671,9 +641,7 @@ class GroqModel(dspy.OpenAI):
         for message in data["messages"]:
             message.pop("name", None)
 
-        response = requests.post(
-            f"{self.api_base}/chat/completions", headers=headers, json=data
-        )
+        response = requests.post(f"{self.api_base}/chat/completions", headers=headers, json=data)
         response.raise_for_status()
         return response.json()
 
@@ -723,12 +691,8 @@ class ClaudeModel(dspy.dsp.modules.lm.LM):
             raise ImportError("Claude requires `pip install anthropic`.") from err
 
         self.provider = "anthropic"
-        self.api_key = api_key = (
-            os.environ.get("ANTHROPIC_API_KEY") if api_key is None else api_key
-        )
-        self.api_base = (
-            "https://api.anthropic.com/v1/messages" if api_base is None else api_base
-        )
+        self.api_key = api_key = os.environ.get("ANTHROPIC_API_KEY") if api_key is None else api_key
+        self.api_base = "https://api.anthropic.com/v1/messages" if api_base is None else api_base
         self.kwargs = {
             "temperature": kwargs.get("temperature", 0.0),
             "max_tokens": min(kwargs.get("max_tokens", 4096), 4096),
@@ -991,14 +955,8 @@ class TGIClient(dspy.HFClientTGI):
 
             completions = [json_response["generated_text"]]
 
-            if (
-                "details" in json_response
-                and "best_of_sequences" in json_response["details"]
-            ):
-                completions += [
-                    x["generated_text"]
-                    for x in json_response["details"]["best_of_sequences"]
-                ]
+            if "details" in json_response and "best_of_sequences" in json_response["details"]:
+                completions += [x["generated_text"] for x in json_response["details"]["best_of_sequences"]]
 
             response = {"prompt": prompt, "choices": [{"text": c} for c in completions]}
             return response
@@ -1023,9 +981,7 @@ class TogetherClient(dspy.HFModel):
 
         super().__init__(model=model, is_client=True)
         self.session = requests.Session()
-        self.api_key = api_key = (
-            os.environ.get("TOGETHER_API_KEY") if api_key is None else api_key
-        )
+        self.api_key = api_key = os.environ.get("TOGETHER_API_KEY") if api_key is None else api_key
         self.model = model
         self.model_type = model_type
         if os.getenv("TOGETHER_API_BASE") is None:
@@ -1044,9 +1000,7 @@ class TogetherClient(dspy.HFModel):
             logging.info("Loading huggingface tokenizer.")
             if hf_tokenizer_name is None:
                 hf_tokenizer_name = self.model
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                hf_tokenizer_name, cache_dir=kwargs.get("cache_dir", None)
-            )
+            self.tokenizer = AutoTokenizer.from_pretrained(hf_tokenizer_name, cache_dir=kwargs.get("cache_dir", None))
 
         stop_default = "\n\n---"
 
@@ -1101,9 +1055,7 @@ class TogetherClient(dspy.HFModel):
         top_k = kwargs.get("top_k", 50)
         repetition_penalty = kwargs.get("repetition_penalty", 1)
         if self.apply_tokenizer_chat_template:
-            prompt = self.tokenizer.apply_chat_template(
-                [{"role": "user", "content": prompt}], tokenize=False
-            )
+            prompt = self.tokenizer.apply_chat_template([{"role": "user", "content": prompt}], tokenize=False)
         # prompt = f"[INST]{prompt}[/INST]" if self.use_inst_template else prompt
 
         if self.model_type == "chat":
@@ -1144,11 +1096,7 @@ class TogetherClient(dspy.HFModel):
             self.log_usage(resp_json)
             if self.model_type == "chat":
                 # completions = [resp_json['output'].get('choices', [])[0].get('message', {}).get('content', "")]
-                completions = [
-                    resp_json.get("choices", [])[0]
-                    .get("message", {})
-                    .get("content", "")
-                ]
+                completions = [resp_json.get("choices", [])[0].get("message", {}).get("content", "")]
             else:
                 # completions = [resp_json['output'].get('choices', [])[0].get('text', "")]
                 completions = [resp_json.get("choices", [])[0].get("text", "")]
@@ -1170,18 +1118,14 @@ class GoogleModel(dspy.dsp.modules.lm.LM):
         try:
             import google.generativeai as genai
         except ImportError as err:
-            raise ImportError(
-                "GoogleModel requires `pip install google-generativeai`."
-            ) from err
+            raise ImportError("GoogleModel requires `pip install google-generativeai`.") from err
 
         api_key = os.environ.get("GOOGLE_API_KEY") if api_key is None else api_key
         genai.configure(api_key=api_key)
 
         kwargs = {
             "candidate_count": 1,  # Caveat: Gemini API supports only one candidate for now.
-            "temperature": (
-                0.0 if "temperature" not in kwargs else kwargs["temperature"]
-            ),
+            "temperature": (0.0 if "temperature" not in kwargs else kwargs["temperature"]),
             "max_output_tokens": kwargs["max_tokens"],
             "top_p": 1,
             "top_k": 1,
@@ -1192,9 +1136,7 @@ class GoogleModel(dspy.dsp.modules.lm.LM):
 
         self.model = model
         self.config = genai.GenerationConfig(**kwargs)
-        self.llm = genai.GenerativeModel(
-            model_name=model, generation_config=self.config
-        )
+        self.llm = genai.GenerativeModel(model_name=model, generation_config=self.config)
 
         self.kwargs = {
             "n": 1,

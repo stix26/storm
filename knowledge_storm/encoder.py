@@ -26,9 +26,7 @@ except ImportError:
 
     class LitellmPlaceholder:
         def __getattr__(self, _):
-            raise ImportError(
-                "The LiteLLM package is not installed. Run `pip install litellm`."
-            )
+            raise ImportError("The LiteLLM package is not installed. Run `pip install litellm`.")
 
     litellm = LitellmPlaceholder()
 
@@ -122,9 +120,7 @@ class Encoder:
         return self._get_text_embeddings(texts, max_workers=max_workers)
 
     def _get_single_text_embedding(self, text):
-        response = litellm.embedding(
-            model=self.embedding_model_name, input=text, caching=True, **self.kargs
-        )
+        response = litellm.embedding(model=self.embedding_model_name, input=text, caching=True, **self.kargs)
         embedding = response.data[0]["embedding"]
         token_usage = response.get("usage", {}).get("total_tokens", 0)
         return text, embedding, token_usage
@@ -156,10 +152,7 @@ class Encoder:
         total_tokens = 0
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = {
-                executor.submit(self._get_single_text_embedding, text): text
-                for text in texts
-            }
+            futures = {executor.submit(self._get_single_text_embedding, text): text for text in texts}
 
             for future in as_completed(futures):
                 try:

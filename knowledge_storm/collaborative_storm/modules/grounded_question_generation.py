@@ -1,7 +1,7 @@
 """
 This module handles question generation within the Co-STORM framework, specifically designed to support the Moderator role.
 
-The Moderator generates insightful, thought-provoking questions that introduce new directions into the conversation. 
+The Moderator generates insightful, thought-provoking questions that introduce new directions into the conversation.
 By leveraging uncited or unused snippets of information retrieved during the discussion, the Moderator ensures the conversation remains dynamic and avoids repetitive or overly niche topics.
 
 For more detailed information, refer to Section 3.5 of the Co-STORM paper: https://www.arxiv.org/pdf/2408.15232.
@@ -39,13 +39,9 @@ class ConvertUtteranceStyle(dspy.Signature):
     """
 
     expert = dspy.InputField(prefix="You are inivited as: ", format=str)
-    action = dspy.InputField(
-        prefix="You want to contribute to conversation by: ", format=str
-    )
+    action = dspy.InputField(prefix="You want to contribute to conversation by: ", format=str)
     prev = dspy.InputField(prefix="Previous speaker said: ", format=str)
-    content = dspy.InputField(
-        prefix="Question or response you want to say: ", format=str
-    )
+    content = dspy.InputField(prefix="Question or response you want to say: ", format=str)
     utterance = dspy.OutputField(
         prefix="Your utterance (keep the information as much as you can with citations, prefer shorter answers without loss of information): ",
         format=str,
@@ -62,9 +58,7 @@ class GroundedQuestionGeneration(dspy.Signature):
     topic = dspy.InputField(prefix="topic: ", format=str)
     summary = dspy.InputField(prefix="Discussion history: \n", format=str)
     information = dspy.InputField(prefix="Available information: \n", format=str)
-    last_utterance = dspy.InputField(
-        prefix="Last utterance in the conversation: \n", format=str
-    )
+    last_utterance = dspy.InputField(prefix="Last utterance in the conversation: \n", format=str)
     output = dspy.OutputField(
         prefix="Now give next discussion focus in the format of one sentence question:\n",
         format=str,
@@ -85,9 +79,7 @@ class GroundedQuestionGenerationModule(dspy.Module):
         last_conv_turn: ConversationTurn,
         unused_snippets: List[Information],
     ):
-        information, index_to_information_mapping = format_search_results(
-            unused_snippets, info_max_num_words=1000
-        )
+        information, index_to_information_mapping = format_search_results(unused_snippets, info_max_num_words=1000)
         summary = knowledge_base.get_knowledge_base_summary()
         last_utterance, _ = extract_and_remove_citations(last_conv_turn.utterance)
         with dspy.settings.context(lm=self.engine, show_guidelines=False):

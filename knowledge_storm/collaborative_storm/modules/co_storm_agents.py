@@ -55,13 +55,9 @@ class CoStormExpert(Agent):
         self.runner_argument = runner_argument
         self.logging_wrapper = logging_wrapper
         self.callback_handler = callback_handler
-        self.costorm_agent_utterance_generator = (
-            self._get_costorm_expert_utterance_generator(rm=rm)
-        )
+        self.costorm_agent_utterance_generator = self._get_costorm_expert_utterance_generator(rm=rm)
 
-    def _get_costorm_expert_utterance_generator(
-        self, rm: Optional[dspy.Retrieve] = None
-    ):
+    def _get_costorm_expert_utterance_generator(self, rm: Optional[dspy.Retrieve] = None):
         return CoStormExpertUtteranceGenerationModule(
             action_planning_lm=self.lm_config.discourse_manage_lm,
             utterance_polishing_lm=self.lm_config.utterance_polishing_lm,
@@ -80,15 +76,11 @@ class CoStormExpert(Agent):
         knowledge_base: KnowledgeBase,
         conversation_history: List[ConversationTurn],
     ):
-        with self.logging_wrapper.log_event(
-            "CoStormExpert generate utternace: get knowledge base summary"
-        ):
+        with self.logging_wrapper.log_event("CoStormExpert generate utternace: get knowledge base summary"):
             if self.callback_handler is not None:
                 self.callback_handler.on_expert_action_planning_start()
             conversation_summary = knowledge_base.get_knowledge_base_summary()
-        with self.logging_wrapper.log_event(
-            "CoStormExpert.generate_utterance generate utterance"
-        ):
+        with self.logging_wrapper.log_event("CoStormExpert.generate_utterance generate utterance"):
             last_conv_turn = conversation_history[-1]
             conv_turn = self.costorm_agent_utterance_generator(
                 topic=self.topic,
@@ -96,14 +88,10 @@ class CoStormExpert(Agent):
                 conversation_summary=conversation_summary,
                 last_conv_turn=last_conv_turn,
             ).conversation_turn
-        with self.logging_wrapper.log_event(
-            "CoStormExpert generate utterance: polish utterance"
-        ):
+        with self.logging_wrapper.log_event("CoStormExpert generate utterance: polish utterance"):
             if self.callback_handler is not None:
                 self.callback_handler.on_expert_utterance_polishing_start()
-            self.costorm_agent_utterance_generator.polish_utterance(
-                conversation_turn=conv_turn, last_conv_turn=last_conv_turn
-            )
+            self.costorm_agent_utterance_generator.polish_utterance(conversation_turn=conv_turn, last_conv_turn=last_conv_turn)
         return conv_turn
 
 
@@ -131,9 +119,7 @@ class SimulatedUser(Agent):
         self.lm_config = lm_config
         self.runner_argument = runner_argument
         self.logging_wrapper = logging_wrapper
-        self.gen_simulated_user_utterance = GenSimulatedUserUtterance(
-            engine=self.lm_config.question_answering_lm
-        )
+        self.gen_simulated_user_utterance = GenSimulatedUserUtterance(engine=self.lm_config.question_answering_lm)
         self.callback_handler = callback_handler
 
     def generate_utterance(
@@ -141,19 +127,13 @@ class SimulatedUser(Agent):
         knowledge_base: KnowledgeBase,
         conversation_history: List[ConversationTurn],
     ):
-        assert (
-            self.intent is not None and self.intent
-        ), "Simulate user intent is not initialized."
+        assert self.intent is not None and self.intent, "Simulate user intent is not initialized."
 
-        with self.logging_wrapper.log_event(
-            "SimulatedUser generate utternace: generate utterance"
-        ):
+        with self.logging_wrapper.log_event("SimulatedUser generate utternace: generate utterance"):
             utterance = self.gen_simulated_user_utterance(
                 topic=self.topic, intent=self.intent, conv_history=conversation_history
             )
-        return ConversationTurn(
-            role="Guest", raw_utterance=utterance, utterance_type="Original Question"
-        )
+        return ConversationTurn(role="Guest", raw_utterance=utterance, utterance_type="Original Question")
 
 
 class Moderator(Agent):
@@ -181,48 +161,36 @@ class Moderator(Agent):
         self.lm_config = lm_config
         self.runner_argument = runner_argument
         self.logging_wrapper = logging_wrapper
-        self.grounded_question_generation_module = GroundedQuestionGenerationModule(
-            engine=self.lm_config.question_asking_lm
-        )
+        self.grounded_question_generation_module = GroundedQuestionGenerationModule(engine=self.lm_config.question_asking_lm)
         self.callback_handler = callback_handler
         self.encoder = encoder
 
-    def _get_conv_turn_unused_information(
-        self, conv_turn: ConversationTurn, knowledge_base: KnowledgeBase
-    ):
+    def _get_conv_turn_unused_information(self, conv_turn: ConversationTurn, knowledge_base: KnowledgeBase):
         # extract all snippets from raw retrieved information
         raw_retrieved_info: List[Information] = conv_turn.raw_retrieved_info
         raw_retrieved_single_snippet_info: List[Information] = []
         for info in raw_retrieved_info:
             for snippet_idx in range(len(info.snippets)):
-                raw_retrieved_single_snippet_info.append(
-                    extract_storm_info_snippet(info, snippet_index=snippet_idx)
-                )
+                raw_retrieved_single_snippet_info.append(extract_storm_info_snippet(info, snippet_index=snippet_idx))
         # get all cited information
         cited_info = list(knowledge_base.info_uuid_to_info_dict.values())
         cited_info_hash_set = set([hash(info) for info in cited_info])
         cited_snippets = [info.snippets[0] for info in cited_info]
         # get list of unused information
         unused_information: List[Information] = [
-            info
-            for info in raw_retrieved_single_snippet_info
-            if hash(info) not in cited_info_hash_set
+            info for info in raw_retrieved_single_snippet_info if hash(info) not in cited_info_hash_set
         ]
         if not unused_information:
             return []
         # extract snippets to get embeddings
         unused_information_snippets = [info.snippets[0] for info in unused_information]
         # get embeddings
-        unused_snippets_embeddings = self.encoder.encode(
-            unused_information_snippets, max_workers=20
-        )
+        unused_snippets_embeddings = self.encoder.encode(unused_information_snippets, max_workers=20)
         claim_embedding = self.encoder.encode(conv_turn.claim_to_make)
         query_embedding = self.encoder.encode(conv_turn.queries)
         cited_snippets_embedding = self.encoder.encode(cited_snippets)
         # calculate similarity
-        query_similarities = cosine_similarity(
-            unused_snippets_embeddings, query_embedding
-        )
+        query_similarities = cosine_similarity(unused_snippets_embeddings, query_embedding)
         max_query_similarity = np.max(query_similarities, axis=1)
         cited_snippets_similarity = np.max(
             cosine_similarity(unused_snippets_embeddings, cited_snippets_embedding),
@@ -230,9 +198,7 @@ class Moderator(Agent):
         )
         cited_snippets_similarity = np.clip(cited_snippets_similarity, 0, 1)
         # use claim similarity to filter out "real" not useful data
-        claim_similarity = cosine_similarity(
-            unused_snippets_embeddings, claim_embedding.reshape(1, -1)
-        ).flatten()
+        claim_similarity = cosine_similarity(unused_snippets_embeddings, claim_embedding.reshape(1, -1)).flatten()
         claim_similarity = np.where(claim_similarity >= 0.25, 1.0, 0.0)
         # calculate score: snippet that is close to topic but far from query
         query_sim_weight = 0.5
@@ -260,9 +226,7 @@ class Moderator(Agent):
             if conv_turn.utterance_type == "Questioning":
                 break
             considered_conv_turn.append(conv_turn)
-            batch_snippets.extend(
-                sum([info.snippets for info in conv_turn.raw_retrieved_info], [])
-            )
+            batch_snippets.extend(sum([info.snippets for info in conv_turn.raw_retrieved_info], []))
             batch_snippets.append(conv_turn.claim_to_make)
             batch_snippets.extend(conv_turn.queries)
         self.encoder.encode(batch_snippets, max_workers=20)
@@ -270,11 +234,7 @@ class Moderator(Agent):
         # get sorted unused snippets for each turn
         sorted_snippets = []
         for conv_turn in considered_conv_turn:
-            sorted_snippets.append(
-                self._get_conv_turn_unused_information(
-                    conv_turn=conv_turn, knowledge_base=knowledge_base
-                )
-            )
+            sorted_snippets.append(self._get_conv_turn_unused_information(conv_turn=conv_turn, knowledge_base=knowledge_base))
 
         # use round robin rule to merge these snippets
         merged_snippets = []
@@ -287,15 +247,11 @@ class Moderator(Agent):
         knowledge_base: KnowledgeBase,
         conversation_history: List[ConversationTurn],
     ):
-        with self.logging_wrapper.log_event(
-            "Moderator generate utternace: get unused snippets"
-        ):
+        with self.logging_wrapper.log_event("Moderator generate utternace: get unused snippets"):
             unused_snippets: List[Information] = self._get_sorted_unused_snippets(
                 knowledge_base=knowledge_base, conversation_history=conversation_history
             )
-        with self.logging_wrapper.log_event(
-            "Moderator generate utternace: QuestionGeneration module"
-        ):
+        with self.logging_wrapper.log_event("Moderator generate utternace: QuestionGeneration module"):
             generated_question = self.grounded_question_generation_module(
                 topic=self.topic,
                 knowledge_base=knowledge_base,
@@ -348,9 +304,7 @@ class PureRAGAgent(Agent):
             mode="brief",
             style="conversational and concise",
         )
-        conversation_turn = ConversationTurn(
-            role=self.role_name, raw_utterance="", utterance_type="Potential Answer"
-        )
+        conversation_turn = ConversationTurn(role=self.role_name, raw_utterance="", utterance_type="Potential Answer")
         conversation_turn.claim_to_make = question
         conversation_turn.raw_utterance = grounded_answer.response
         conversation_turn.utterance = grounded_answer.response
@@ -367,9 +321,5 @@ class PureRAGAgent(Agent):
         knowledge_base: KnowledgeBase,
         conversation_history: List[ConversationTurn],
     ):
-        with self.logging_wrapper.log_event(
-            "PureRAGAgent generate utternace: generate utterance"
-        ):
-            return self._gen_utterance_from_question(
-                question=conversation_history[-1].utterance
-            )
+        with self.logging_wrapper.log_event("PureRAGAgent generate utternace: generate utterance"):
+            return self._gen_utterance_from_question(question=conversation_history[-1].utterance)
