@@ -156,11 +156,6 @@ jobs:
       if: steps.check-dockerfile.outputs.dockerfile_exists == 'true'
       uses: docker/setup-buildx-action@v3
       
-    - name: Validate Dockerfile syntax
-      if: steps.check-dockerfile.outputs.dockerfile_exists == 'true'
-      run: |
-        docker build --dry-run -f Dockerfile .
-        
     - name: Build Docker image (dry run)
       if: steps.check-dockerfile.outputs.dockerfile_exists == 'true'
       run: |
@@ -256,7 +251,7 @@ jobs:
         pip-audit || true
         
     - name: Upload security reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: security-reports
         path: |
