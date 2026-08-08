@@ -90,8 +90,8 @@ ci-local: ## Run all CI checks locally
 
 version-check: ## Check version consistency
 	@echo "Checking version consistency..."
-	@VERSION_SETUP=$$(grep -oP '(?<=version=\").*(?=\")' setup.py); \
-	VERSION_INIT=$$(grep -oP '(?<=__version__ = \").*(?=\")' knowledge_storm/__init__.py); \
+	@VERSION_SETUP=$$(sed -n 's/.*version="\(.*\)".*/\1/p' setup.py | head -1); \
+	VERSION_INIT=$$(sed -n 's/.*__version__ = "\(.*\)".*/\1/p' knowledge_storm/__init__.py | head -1); \
 	echo "Version in setup.py: $$VERSION_SETUP"; \
 	echo "Version in __init__.py: $$VERSION_INIT"; \
 	if [ "$$VERSION_SETUP" != "$$VERSION_INIT" ]; then \

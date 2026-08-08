@@ -9,8 +9,13 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-      - uses: psf/black@stable
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
         with:
-          black_args: "knowledge_storm --check"
+          python-version: "3.11"
+      - name: Install black
+        run: pip install black
+      - name: Check formatting
+        run: |
+          black --check --diff knowledge_storm/
+          black --check --diff examples/

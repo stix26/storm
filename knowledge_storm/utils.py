@@ -9,13 +9,17 @@ import re
 import regex
 import sys
 import toml
-from typing import List, Dict
+from typing import TYPE_CHECKING, List, Dict
 from tqdm import tqdm
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from trafilatura import extract
 
 from .lm import LitellmModel
+
+if TYPE_CHECKING:
+    from langchain_huggingface import HuggingFaceEmbeddings
+    from qdrant_client import QdrantClient
 
 logging.getLogger("httpx").setLevel(logging.WARNING)  # Disable INFO logging for httpx.
 
@@ -30,9 +34,7 @@ def truncate_filename(filename, max_length=125):
 
     if len(filename) > max_length:
         truncated_filename = filename[:max_length]
-        logging.warning(
-            f"Filename is too long. Filename is truncated to {truncated_filename}."
-        )
+        logging.warning(f"Filename is too long. Filename is truncated to {truncated_filename}.")
         return truncated_filename
 
     return filename
@@ -66,9 +68,7 @@ class QdrantVectorStoreManager:
     """
 
     @staticmethod
-    def _check_create_collection(
-        client: "QdrantClient", collection_name: str, model: "HuggingFaceEmbeddings"
-    ):
+    def _check_create_collection(client: "QdrantClient", collection_name: str, model: "HuggingFaceEmbeddings"):
         from langchain_qdrant import Qdrant
         from qdrant_client import models
 
@@ -83,15 +83,11 @@ class QdrantVectorStoreManager:
                 embeddings=model,
             )
         else:
-            print(
-                f"Collection {collection_name} does not exist. Creating the collection..."
-            )
+            print(f"Collection {collection_name} does not exist. Creating the collection...")
             # create the collection
             client.create_collection(
                 collection_name=f"{collection_name}",
-                vectors_config=models.VectorParams(
-                    size=1024, distance=models.Distance.COSINE
-                ),
+                vectors_config=models.VectorParams(size=1024, distance=models.Distance.COSINE),
             )
             return Qdrant(
                 client=client,
@@ -100,9 +96,7 @@ class QdrantVectorStoreManager:
             )
 
     @staticmethod
-    def _init_online_vector_db(
-        url: str, api_key: str, collection_name: str, model: "HuggingFaceEmbeddings"
-    ):
+    def _init_online_vector_db(url: str, api_key: str, collection_name: str, model: "HuggingFaceEmbeddings"):
         from qdrant_client import QdrantClient
 
         """Initialize the Qdrant client that is connected to an online vector store with the given URL and API key.
@@ -127,9 +121,7 @@ class QdrantVectorStoreManager:
             raise ValueError(f"Error occurs when connecting to the server: {e}")
 
     @staticmethod
-    def _init_offline_vector_db(
-        vector_store_path: str, collection_name: str, model: "HuggingFaceEmbeddings"
-    ):
+    def _init_offline_vector_db(vector_store_path: str, collection_name: str, model: "HuggingFaceEmbeddings"):
         from qdrant_client import QdrantClient
 
         """Initialize the Qdrant client that is connected to an offline vector store with the given vector store folder path.
@@ -230,9 +222,7 @@ class QdrantVectorStoreManager:
                 model=model,
             )
         else:
-            raise ValueError(
-                "Invalid vector_db_mode. Please provide either 'online' or 'offline'."
-            )
+            raise ValueError("Invalid vector_db_mode. Please provide either 'online' or 'offline'.")
         if qdrant is None:
             raise ValueError("Qdrant client is not initialized.")
 
@@ -242,9 +232,7 @@ class QdrantVectorStoreManager:
         df = pd.read_csv(file_path)
         # check that content column exists and url column exists
         if content_column not in df.columns:
-            raise ValueError(
-                f"Content column {content_column} not found in the csv file."
-            )
+            raise ValueError(f"Content column {content_column} not found in the csv file.")
         if url_column not in df.columns:
             raise ValueError(f"URL column {url_column} not found in the csv file.")
 
@@ -278,7 +266,7 @@ class QdrantVectorStoreManager:
                 "\uff0c",  # Fullwidth comma
                 "\u3001",  # Ideographic comma
                 " ",
-                "\u200B",  # Zero-width space
+                "\u200b",  # Zero-width space
                 "",
             ],
         )
@@ -388,9 +376,7 @@ class ArticleTextProcessing:
         def deduplicate_group(match):
             citations = match.group(0)
             unique_citations = list(set(re.findall(r"\[\d+\]", citations)))
-            sorted_citations = sorted(
-                unique_citations, key=lambda x: int(x.strip("[]"))
-            )
+            sorted_citations = sorted(unique_citations, key=lambda x: int(x.strip("[]")))
             # Return the sorted unique citations as a string
             return "".join(sorted_citations)
 
@@ -428,28 +414,18 @@ class ArticleTextProcessing:
     def clean_up_citation(conv):
         for turn in conv.dlg_history:
             if "References:" in turn.agent_utterance:
-                turn.agent_utterance = turn.agent_utterance[
-                    : turn.agent_utterance.find("References:")
-                ]
+                turn.agent_utterance = turn.agent_utterance[: turn.agent_utterance.find("References:")]
             if "Sources:" in turn.agent_utterance:
-                turn.agent_utterance = turn.agent_utterance[
-                    : turn.agent_utterance.find("Sources:")
-                ]
+                turn.agent_utterance = turn.agent_utterance[: turn.agent_utterance.find("Sources:")]
             turn.agent_utterance = turn.agent_utterance.replace("Answer:", "").strip()
             try:
-                max_ref_num = max(
-                    [int(x) for x in re.findall(r"\[(\d+)\]", turn.agent_utterance)]
-                )
+                max_ref_num = max([int(x) for x in re.findall(r"\[(\d+)\]", turn.agent_utterance)])
             except Exception as e:
                 max_ref_num = 0
             if max_ref_num > len(turn.search_results):
                 for i in range(len(turn.search_results), max_ref_num + 1):
                     turn.agent_utterance = turn.agent_utterance.replace(f"[{i}]", "")
-            turn.agent_utterance = (
-                ArticleTextProcessing.remove_uncompleted_sentences_with_citations(
-                    turn.agent_utterance
-                )
-            )
+            turn.agent_utterance = ArticleTextProcessing.remove_uncompleted_sentences_with_citations(turn.agent_utterance)
 
         return conv
 
@@ -470,9 +446,7 @@ class ArticleTextProcessing:
                 output_lines.append(stripped_line)
             # Check if the line is a bullet point
             elif stripped_line.startswith("-"):
-                subsection_header = (
-                    "#" * (current_level + 1) + " " + stripped_line[1:].strip()
-                )
+                subsection_header = "#" * (current_level + 1) + " " + stripped_line[1:].strip()
                 output_lines.append(subsection_header)
 
         outline = "\n".join(output_lines)
@@ -482,19 +456,11 @@ class ArticleTextProcessing:
         outline = re.sub(r"#[#]? See Also.*?(?=##|$)", "", outline, flags=re.DOTALL)
         outline = re.sub(r"#[#]? Notes.*?(?=##|$)", "", outline, flags=re.DOTALL)
         outline = re.sub(r"#[#]? References.*?(?=##|$)", "", outline, flags=re.DOTALL)
-        outline = re.sub(
-            r"#[#]? External links.*?(?=##|$)", "", outline, flags=re.DOTALL
-        )
-        outline = re.sub(
-            r"#[#]? External Links.*?(?=##|$)", "", outline, flags=re.DOTALL
-        )
+        outline = re.sub(r"#[#]? External links.*?(?=##|$)", "", outline, flags=re.DOTALL)
+        outline = re.sub(r"#[#]? External Links.*?(?=##|$)", "", outline, flags=re.DOTALL)
         outline = re.sub(r"#[#]? Bibliography.*?(?=##|$)", "", outline, flags=re.DOTALL)
-        outline = re.sub(
-            r"#[#]? Further reading*?(?=##|$)", "", outline, flags=re.DOTALL
-        )
-        outline = re.sub(
-            r"#[#]? Further Reading*?(?=##|$)", "", outline, flags=re.DOTALL
-        )
+        outline = re.sub(r"#[#]? Further reading*?(?=##|$)", "", outline, flags=re.DOTALL)
+        outline = re.sub(r"#[#]? Further Reading*?(?=##|$)", "", outline, flags=re.DOTALL)
         outline = re.sub(r"#[#]? Summary.*?(?=##|$)", "", outline, flags=re.DOTALL)
         outline = re.sub(r"#[#]? Appendices.*?(?=##|$)", "", outline, flags=re.DOTALL)
         outline = re.sub(r"#[#]? Appendix.*?(?=##|$)", "", outline, flags=re.DOTALL)
@@ -523,11 +489,7 @@ class ArticleTextProcessing:
                     summary_sec_flag = False
                 else:
                     continue
-            if (
-                p.startswith("Overall")
-                or p.startswith("In summary")
-                or p.startswith("In conclusion")
-            ):
+            if p.startswith("Overall") or p.startswith("In summary") or p.startswith("In conclusion"):
                 continue
             if "# Summary" in p or "# Conclusion" in p:
                 summary_sec_flag = True
@@ -541,9 +503,7 @@ class ArticleTextProcessing:
     def update_citation_index(s, citation_map):
         """Update citation index in the string based on the citation map."""
         for original_citation in citation_map:
-            s = s.replace(
-                f"[{original_citation}]", f"__PLACEHOLDER_{original_citation}__"
-            )
+            s = s.replace(f"[{original_citation}]", f"__PLACEHOLDER_{original_citation}__")
         for original_citation, unify_citation in citation_map.items():
             s = s.replace(f"__PLACEHOLDER_{original_citation}__", f"[{unify_citation}]")
 
@@ -666,7 +626,7 @@ class WebPageHelper:
                 "\uff0c",  # Fullwidth comma
                 "\u3001",  # Ideographic comma
                 " ",
-                "\u200B",  # Zero-width space
+                "\u200b",  # Zero-width space
                 "",
             ],
         )
@@ -682,9 +642,7 @@ class WebPageHelper:
             return None
 
     def urls_to_articles(self, urls: List[str]) -> Dict:
-        with concurrent.futures.ThreadPoolExecutor(
-            max_workers=self.max_thread_num
-        ) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_thread_num) as executor:
             htmls = list(executor.map(self.download_webpage, urls))
 
         articles = {}
@@ -756,9 +714,7 @@ User input: {user_input}"""
                 if reject_reason in reject_reason_info:
                     return reject_reason_info[reject_reason]
                 else:
-                    return (
-                        "Sorry, the input is inappropriate. Please try another topic!"
-                    )
+                    return "Sorry, the input is inappropriate. Please try another topic!"
             return "Sorry, the input is inappropriate. Please try another topic!"
 
     except Exception as e:
