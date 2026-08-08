@@ -121,7 +121,7 @@ jobs:
                 with tarfile.open(f'dist/{file}', 'r:gz') as tar:
                     members = tar.getnames()
                     print(f'Source distribution contains {len(members)} files')
-                    if 'knowledge_storm/__init__.py' not in members:
+                    if not any(m.endswith('knowledge_storm/__init__.py') for m in members):
                         raise Exception('Missing __init__.py in source distribution')
                         
         # Check wheel
@@ -130,7 +130,7 @@ jobs:
                 with zipfile.ZipFile(f'dist/{file}') as wheel:
                     members = wheel.namelist()
                     print(f'Wheel contains {len(members)} files')
-                    if 'knowledge_storm/__init__.py' not in members:
+                    if not any(m.endswith('knowledge_storm/__init__.py') for m in members):
                         raise Exception('Missing __init__.py in wheel')
         "
 
